@@ -611,3 +611,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   to run the suite.
 - **Why:** Compose v2 ignores the key and warns about it on every command.
 - **How tested:** `docker compose -f docker-compose.test.yml config` reports no warning and resolves all services.
+
+### Wait for Redis, MongoDB and MySQL to be ready before running tests
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** health checks for redis (`redis-cli ping`), mongo (`db.adminCommand('ping')`) and mysql (log in as
+  `MYSQL_USER` over TCP), and `sut`/`celery` now use `depends_on: ... condition: service_healthy` for them.
+- **Why:** plain `depends_on` only waits for a container to *start*, not for the service in it to be ready. A fresh
+  MySQL refuses connections ("ERROR 2003 (HY000): Can't connect") for about 25 seconds while it initialises (the
+  `-h 127.0.0.1` check also skips the temporary server the MySQL image runs during initialisation), so tests that
+  reached MySQL early failed for reasons unrelated to tcapy.
+- **How tested:** a fresh test MySQL first accepted the test user over TCP after 25s; with the health checks, `sut`
+  starts only once all three report healthy, and the test suite's database tests pass.

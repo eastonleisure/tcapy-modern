@@ -16,11 +16,16 @@ services:
     environment:
       - APP_ENV=docker
     depends_on:
-      - celery
-      - redis
-      - memcached
-      - mongo
-      - mysql
+      celery:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
 
   celery:
     build:
@@ -34,14 +39,22 @@ services:
       - APP_ENV=docker
       - C_FORCE_ROOT=true
     depends_on:
-      - redis
-      - mongo
-      - mysql
-      - memcached
+      redis:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
 
   redis:
     image: "redis:7.4-alpine"
     command: redis-server --port 6379 --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
 
   memcached:
     image: memcached:1.6
@@ -49,9 +62,19 @@ services:
   mongo:
     image: mongo:4.4
     env_file: .tcapy.env
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      retries: 60
 
   mysql:
     image: mysql:8.0
     env_file: .tcapy.env
     environment:
       - MYSQL_DATABASE=trade_database_test_harness
+    healthcheck:
+      # Only healthy once the real server (not the init-time temporary one) accepts TCP connections
+      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      retries: 60
+
