@@ -103,3 +103,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** with these pins both web apps (`tcapy_wsgi`, `tcapyboard_wsgi`) and `flask_restplus` import, and the
   web UI serves and runs TCA calculations on all pages. The failures above come from upgrading one package at a time
   in a copy of the working image.
+
+### Pin SQLAlchemy to 1.3.24
+
+- **File:** `requirements.txt`
+- **What changed:** `sqlalchemy` -> `SQLAlchemy==1.3.24`.
+- **Why:** unpinned, pip installs SQLAlchemy 2.0 (2.0.57 on Python 3.7), which removed APIs tcapy's SQL data sources
+  use. Against the running MySQL, both directions fail:
+  - writing trade data (`convert_csv_to_table`): `TypeError: __init__() got an unexpected keyword argument 'bind'`
+  - reading trade data (`fetch_trade_order_data`): the query returns nothing and fails with
+    `TypeError: object of type 'NoneType' has no len()`
+- **How tested:** with 1.3.24, writing the sample orders to MySQL and reading the trades back both work (52 EURUSD trades
+  for 1-12 May 2017), and the full test suite and web UI ran on it. SQLAlchemy 1.4.54 also passed this read/write check,
+  but 1.3.24 is the version the full test suite was run with.

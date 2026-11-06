@@ -1,7 +1,7 @@
 setuptools-git==1.2
 cython
 arctic==1.79.4
-sqlalchemy
+SQLAlchemy==1.3.24
 redis
 pandas==1.0.5
 numpy
