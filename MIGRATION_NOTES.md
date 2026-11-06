@@ -523,3 +523,14 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **Remaining notebook limits (not fixable here):** five notebooks download market data live from Dukascopy, which
   currently refuses findatapy's requests; `real_life_tcapy_case_study.ipynb` reads the original author's private file
   `e:/cuemacro/tcapy/external/trade_2017.csv`; `excel_xlwings_with_tcapy.ipynb` needs Microsoft Excel.
+
+### docker-compose.yml: start the databases with the jupyter service
+
+- **File:** `docker-compose.yml`
+- **What changed:** the jupyter service's `depends_on` now also lists `mongo`, `mysql` and `memcached` (it had only
+  `redis` and `celery`).
+- **Why:** the notebooks read market data from MongoDB (Arctic), trades from MySQL, and use memcached as Celery's
+  result store. With `docker compose up jupyter` on its own, Compose didn't start those, so notebook cells failed to
+  connect. The tcapy web services already list the same dependencies.
+- **How tested:** `docker compose config` shows the jupyter service depending on all five; from the jupyter container
+  the notebook kernel reads from MongoDB and MySQL (see the build entry above).

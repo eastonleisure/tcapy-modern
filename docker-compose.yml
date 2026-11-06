@@ -29,6 +29,9 @@ services:
     depends_on:
       - redis
       - celery
+      - mongo
+      - mysql
+      - memcached
     volumes:
       - /tmp/csv:/tmp/csv
       - /tmp/tcapy:/tmp/tcapy
