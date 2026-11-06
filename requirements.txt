@@ -72,4 +72,5 @@ python-snappy==0.5.4
 bokeh
 msgpack==1.0.0
 pystore
+multitasking==0.0.10
 fsspec==0.8.7

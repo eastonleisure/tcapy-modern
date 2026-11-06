@@ -191,3 +191,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** a multithreaded TCA calculation dispatched through a Celery worker (isolated on its own Redis
   database) succeeds with 4.13.0, with the same results as single-threaded. With importlib-metadata 6.7.0 it fails as
   above with both kombu 5.0.2 and kombu 5.2.4, so the fix is this pin rather than a kombu version.
+
+### Pin multitasking to 0.0.10
+
+- **File:** `requirements.txt`
+- **What changed:** added `multitasking==0.0.10` (not listed before; `pystore` and `yfinance` pull it in unpinned).
+- **Why:** multitasking 0.0.12 and later import `typing.TypedDict`, which only exists from Python 3.8. pystore imports
+  multitasking, and `tcapy.data.databasesource` imports pystore, so on Python 3.7 everything that loads tcapy's data
+  layer failed: both web apps and the Celery worker crashed at start with
+  `ImportError: cannot import name 'TypedDict' from 'typing'`.
+- **How tested:** with each version installed in a copy of the working image, `import pystore` and the web app import
+  (`tcapy_wsgi`) both fail on 0.0.12 and 0.0.13 and work on 0.0.10 and 0.0.11. 0.0.10 is pinned because the full test
+  suite and web UI were run with it.
