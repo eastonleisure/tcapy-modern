@@ -142,3 +142,18 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   built, so there's no earlier result to compare with. On 1.19.5 that calculation gives 25 trades, mean slippage
   -0.000013700306 and sum of arrival prices 27.2910554409 - identical with or without the Celery workers and with
   numba 0.53.1 or 0.56.4.
+
+### Pin dask, distributed, cloudpickle and fsspec as a compatible set
+
+- **File:** `requirements.txt`
+- **What changed:** `dask` -> `dask==2.30.0`, `distributed` -> `distributed==2.30.1`, `cloudpickle==1.3.0` ->
+  `cloudpickle==1.6.0`, `fsspec==0.3.3` -> `fsspec==0.8.7`.
+- **Why:** these are used by pystore (tcapy's optional Parquet-on-disk market data store; `tcapy.data.databasesource`
+  imports it, and it needs `dask.distributed`). The original file pinned `cloudpickle` and `fsspec` to old releases but
+  left `dask` and `distributed` unpinned, so pip installs dask/distributed 2022.2.0, which need cloudpickle >= 1.5 and
+  fsspec >= 0.6. pip reports both conflicts, and pystore then can't write:
+  `AttributeError: 'LocalFileSystem' object has no attribute 'expand_path'`.
+  The four are pinned together to one release set that works with each other and with pandas 1.0.5.
+- **How tested:** with these pins, pystore writes and reads back a test series, `tcapy.data.databasesource` imports, and
+  the full test suite and web UI ran on them. With the original pins, pip reports the two conflicts and the pystore write
+  fails as above. (Leaving all four unpinned also passed the pystore check, but was not run through the full test suite.)
