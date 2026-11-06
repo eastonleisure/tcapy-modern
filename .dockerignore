@@ -5,6 +5,7 @@
 
 !requirements.txt
 !requirements.lock
+!docker/patch_findatapy_dukascopy.py
 
 !test
 !tcapy

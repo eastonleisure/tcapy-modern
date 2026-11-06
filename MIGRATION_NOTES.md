@@ -659,3 +659,59 @@ including multithreading), on this branch plus the numba fix, run alongside the 
   databases without requesting the fixture that fills them (fixed separately in the bug fixes).
 - `test_results_agg.py::test_histogram_generator`: a tcapy bug in the histogram min/max, held for a separate decision
   (`TCA_QUESTIONS.md`).
+
+---
+
+## findatapy (Dukascopy downloader)
+
+findatapy 0.1.19 is pinned (newer releases need packages that don't install on Python 3.7), so its bugs are fixed by
+`docker/patch_findatapy_dukascopy.py`, which the Dockerfile runs after installing packages. The script checks the
+findatapy version and the exact code it changes, so a different findatapy fails the build instead of being patched
+blindly (running it twice also fails, for the same reason).
+
+Dukascopy currently answers findatapy's requests with **403 Forbidden** (its CDN blocks the default Python
+User-Agent). That is deliberately not worked around - upstream findatapy >= 0.1.37 sends a browser User-Agent. These
+fixes make a refused or failed download fail quickly and cleanly instead.
+
+### Check HTTP status codes and count every retry
+
+- **Files:** `docker/patch_findatapy_dukascopy.py` (new), `Dockerfile`, `.dockerignore`
+- **What changed:** findatapy's `DataVendorDukasCopy.fetch_tick` now treats only HTTP 200 as data, stops immediately on
+  404 (no file for that hour) and 401/403 (refused, logged as "Dukascopy refused the request"), and counts every failed
+  attempt (up to 20, as before). The Dockerfile copies and runs the script; `.dockerignore` lets it into the build.
+- **Why:** `fetch_tick` never looked at the status code. An error page that didn't contain the text "error" was
+  returned as tick data (then failed to decompress, and that hour silently went missing). One that did contain "error"
+  was retried - but that path never incremented the attempt counter or slept, so it retried forever in a tight loop.
+  Dukascopy's 403 page contains "error", so every download attempt sent requests to Dukascopy as fast as it could,
+  indefinitely.
+- **How tested:** in-process against the original and the patched findatapy:
+  - a server that always returns an error page: original - still retrying after 5s (8.9 million requests); patched -
+    gives up after 20 attempts and returns no data;
+  - a real request to Dukascopy (403): original - still running after 60s; patched - returns no data in 0.1s with the
+    "refused" error logged.
+
+### Return "no data" when every download attempt fails
+
+- **File:** `docker/patch_findatapy_dukascopy.py`
+- **What changed:** in `DataVendorDukasCopy.download_tick`, `tick_list` is initialised to an empty list before the
+  multithreaded download attempts.
+- **Why:** if all five attempts failed (eg. each hit the pool timeout), `tick_list` was never assigned and the function
+  crashed with `UnboundLocalError: local variable 'tick_list' referenced before assignment` instead of returning no data.
+  tcapy's data-vendor tests failed with exactly this error.
+- **How tested:** with every download attempt made to fail: original - `UnboundLocalError`; patched - returns `None`
+  (no data), which tcapy reports as a failed download.
+
+### Use the https Dukascopy URL
+
+- **File:** `docker/patch_findatapy_dukascopy.py`
+- **What changed:** findatapy's `dukascopy_base_url` from `http://www.dukascopy.com/datafeed/` to
+  `https://www.dukascopy.com/datafeed/` (as in upstream findatapy).
+- **Why:** Dukascopy redirects the http URL to https, so every request made an extra round trip over plain HTTP first.
+- **How tested:** `DataConstants().dukascopy_base_url` is the https URL after patching, and requests to it get the same
+  responses as before (currently 403).
+
+### Data-vendor tests after these fixes
+
+With the patched image, `test/test_tcapy/test_data_vendor_feed.py` still fails (4 tests), because Dukascopy refuses the
+downloads, but now quickly and with a clear cause instead of crashing or retrying indefinitely - see the result in the
+PR description.

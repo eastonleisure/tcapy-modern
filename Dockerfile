@@ -30,6 +30,10 @@ RUN sed -i -e 's|deb.debian.org|archive.debian.org|g' -e 's|security.debian.org|
 # pinned runtime one (ndarray size mismatch), so rebuild it against the installed numpy
 RUN pip install --no-cache-dir --no-build-isolation --no-binary fastparquet --force-reinstall --no-deps fastparquet==0.4.1
 
+# Fix error handling in the pinned findatapy's Dukascopy downloader (see the script for details)
+COPY docker/patch_findatapy_dukascopy.py /tmp/tcapy/
+RUN python /tmp/tcapy/patch_findatapy_dukascopy.py
+
 # Copy to /
 COPY ./tcapy /tcapy/tcapy
 COPY ./tcapygen /tcapy/tcapygen
