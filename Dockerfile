@@ -12,7 +12,10 @@ COPY requirements.txt /tmp/tcapy/requirements.txt
 # Dependencies for pystore and weasyprint in buildDeps
 # If we don't want to use weasyprint we
 # build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
-RUN buildDeps='gcc g++ libsnappy-dev unixodbc-dev build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info' && \
+# Debian stretch is end-of-life, so its packages now live on archive.debian.org (and stretch-updates is gone)
+RUN sed -i -e 's|deb.debian.org|archive.debian.org|g' -e 's|security.debian.org|archive.debian.org|g' \
+        -e '/stretch-updates/d' /etc/apt/sources.list && \
+    buildDeps='gcc g++ libsnappy-dev unixodbc-dev build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info' && \
     apt-get update && apt-get install -y $buildDeps --no-install-recommends && \
     pip install --no-cache-dir -r /tmp/tcapy/requirements.txt && \
     rm  /tmp/tcapy/requirements.txt
