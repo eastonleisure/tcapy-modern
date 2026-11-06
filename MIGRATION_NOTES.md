@@ -353,3 +353,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   Adminer 4): the web UI on every page, Redis caching of results, Celery tasks via Redis, the Celery result backend in
   memcached, and the Adminer page (HTTP 200) all work on them. The nginx config was validated with `nginx -t` on
   `nginx:1.27`.
+
+### docker-compose.yml: remove the obsolete `version` key
+
+- **File:** `docker-compose.yml`
+- **What changed:** removed the first line, `version: '3.6'`.
+- **Why:** Compose v2 ignores this key and prints a warning on every `docker compose` command:
+  "the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion".
+  Only the old Python Compose v1 (end-of-life since July 2023) used it; with it gone, v1 would no longer read this file.
+  Docker Desktop's `docker-compose` command (used by the `Makefile`) is Compose v2, so `make` is unaffected.
+- **How tested:** `docker compose config` on the file without the key reports no warning and resolves all ten services
+  (nginx, jupyter, gunicorn_tcapy, gunicorn_tcapyboard, celery, redis, memcached, mongo, mysql, adminer). The running
+  stack has used the file without this key.
