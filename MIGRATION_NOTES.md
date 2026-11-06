@@ -741,3 +741,12 @@ PR description.
   run and publish no ports, so throwaway credentials are enough; no repository secrets are needed.
 - **How tested:** the step's script, extracted from the workflow file, run in a clean checkout produces a `.tcapy.env`
   the test stack starts with (see the last entry).
+
+### Makefile: use `docker compose` (Compose v2)
+
+- **File:** `Makefile`
+- **What changed:** the five `docker-compose ...` commands are now `docker compose ...`.
+- **Why:** `docker-compose` is the standalone Compose v1 command, which is end-of-life and no longer installed on
+  GitHub's `ubuntu-latest` runners, so `make test` in CI would fail with "docker-compose: command not found" even after
+  the actions were fixed. `docker compose` (v2) is on the runners and in Docker Desktop.
+- **How tested:** `make test` runs the test stack with `docker compose` (last entry).
