@@ -813,3 +813,17 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   favicon and `tabs.css` (the tab styles) were never served.
 - **How tested:** before, `/tcapy/assets/logo.png` and `/tcapyboard/assets/logo.png` returned 404; after, both return
   200 (image/png) and the logo shows on every page, the page's declared favicon loads, and `tabs.css` is served.
+
+### Main web app: remove the stylesheet link that never loaded
+
+- **File:** `tcapy/vis/app.py`
+- **What changed:** `stylesheets = ['tcapy.css', dbc.themes.BOOTSTRAP]` -> `stylesheets = ['tcapy.css']`, with a comment
+  explaining why.
+- **Why:** every entry gets the local `/static/` prefix, so the Bootstrap CDN URL became
+  `/tcapy/static/https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css` and returned 404 on every
+  page load - Bootstrap has never actually been applied. No dash-bootstrap components are used. Loading it correctly
+  was tried and breaks the layout: Bootstrap sizes text relative to the root font size, which `tcapy.css` sets to 62.5%,
+  so body text became 10px and the page title 20px (normally 15px and 36px). The page renders exactly as before; only
+  the failing request is gone.
+- **How tested:** before, that URL was the only failing request on the page (404); after, no request fails, and the page
+  layout (fonts, control positions) is unchanged.
