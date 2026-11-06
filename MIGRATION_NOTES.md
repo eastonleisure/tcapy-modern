@@ -203,3 +203,17 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** with each version installed in a copy of the working image, `import pystore` and the web app import
   (`tcapy_wsgi`) both fail on 0.0.12 and 0.0.13 and work on 0.0.10 and 0.0.11. 0.0.10 is pinned because the full test
   suite and web UI were run with it.
+
+### Pin tzlocal to 2.1
+
+- **File:** `requirements.txt`
+- **What changed:** added `tzlocal==2.1` (not listed before; arctic pulls it in unpinned).
+- **Why:** arctic 1.79.4 calls `tzlocal.get_localzone().zone`. tzlocal 3.0+ returns a `zoneinfo` timezone, which has no
+  `.zone` attribute (only the pytz-based 2.x did), so pip's newest release (5.1 on Python 3.7) breaks arctic's
+  TICK_STORE format: `AttributeError: 'backports.zoneinfo.ZoneInfo' object has no attribute 'zone'`. tcapy's default
+  Arctic format is CHUNK_STORE, which isn't affected, but TICK_STORE is a supported setting (`arctic_lib_type` in
+  `constants.py`) and the test suite's Arctic read/write tests use it. Only arctic uses tzlocal here.
+- **How tested:** wrote one day of EURUSD ticks (35,443) to Arctic in all three formats against the running MongoDB.
+  With tzlocal 2.1, CHUNK_STORE, TICK_STORE and VERSION_STORE all write and read back 35,443 ticks. With tzlocal 5.1,
+  TICK_STORE fails as above. The full test suite's five Arctic tests failed with this error before the pin and pass
+  with it.
