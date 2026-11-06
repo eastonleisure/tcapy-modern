@@ -178,3 +178,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   `curl_cffi` dependency. tcapy itself doesn't use yfinance; it's an optional Yahoo data source inside findatapy.
 - **How tested:** the image build failed at `curl_cffi` as above; with the pin it installs, and findatapy and tcapy's
   data modules import. The Yahoo download path itself was not exercised.
+
+### Pin importlib-metadata to 4.13.0
+
+- **File:** `requirements.txt`
+- **What changed:** added `importlib-metadata==4.13.0` (not listed before; Celery/kombu pull it in unpinned on
+  Python 3.7).
+- **Why:** importlib-metadata 5.0 removed the dict-style `entry_points().get(...)` interface. Celery 5.0.5 and kombu
+  still call it, so with the newest release (6.7.0 on Python 3.7) Celery can't even be imported:
+  `AttributeError: 'EntryPoints' object has no attribute 'get'`. The Celery worker container crashed on start, and any
+  TCA run that uses the workers failed. 4.13.0 is the last release before 5.0.
+- **How tested:** a multithreaded TCA calculation dispatched through a Celery worker (isolated on its own Redis
+  database) succeeds with 4.13.0, with the same results as single-threaded. With importlib-metadata 6.7.0 it fails as
+  above with both kombu 5.0.2 and kombu 5.2.4, so the fix is this pin rather than a kombu version.
