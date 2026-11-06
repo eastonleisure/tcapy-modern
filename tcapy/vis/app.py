@@ -51,7 +51,8 @@ for css in stylesheets:
     # app.css.append_css({"external_url": static_css_route + css})
     stylesheets_path.append(static_css_route + css)
 
-app = dash.Dash(name='tcapy', server=server, #url_base_pathname=routes_pathname_prefix,
+app = dash.Dash(name='tcapy', server=server, assets_folder=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets'), # Dash would otherwise look in the package root, not tcapy/vis/assets (logo 404)
+                #url_base_pathname=routes_pathname_prefix,
                 suppress_callback_exceptions=True, serve_locally=True,
                 external_stylesheets=stylesheets_path,
                 meta_tags=[{"name": "viewport", "content": "width=1000px"}])

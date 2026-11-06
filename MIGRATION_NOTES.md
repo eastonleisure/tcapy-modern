@@ -796,3 +796,20 @@ opened.
   action, and its `make test` step would need the same `.tcapy.env` credentials step as the CI workflow. Before
   creating version tags, decide whether to remove this workflow, or update it (and set up credentials) to publish
   under a name you own.
+
+---
+
+## Bug fixes (tcapy code)
+
+Calculation-affecting fixes are not in this section; they are held for a separate decision in `TCA_QUESTIONS.md`.
+
+### Web apps: serve the logo and other assets from `tcapy/vis/assets`
+
+- **Files:** `tcapy/vis/app.py`, `tcapy/vis/app_board.py`
+- **What changed:** both `dash.Dash(...)` calls pass `assets_folder=<directory of the app file>/assets`.
+- **Why:** Dash looks for an `assets/` folder next to the module named in `name=`. For `name='tcapy'` that is the
+  `tcapy` package folder (`tcapy/assets`, which doesn't exist) and for `name='tcapyboard'` the working directory
+  (`tcapy/conf/assets`). The assets are in `tcapy/vis/assets`, so the header logo on every page returned 404, and the
+  favicon and `tabs.css` (the tab styles) were never served.
+- **How tested:** before, `/tcapy/assets/logo.png` and `/tcapyboard/assets/logo.png` returned 404; after, both return
+  200 (image/png) and the logo shows on every page, the page's declared favicon loads, and `tabs.css` is served.
