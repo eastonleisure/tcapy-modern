@@ -41,3 +41,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** the image build gets past this package. In the running stack, tcapy connects to MySQL 8.0 with it:
   the sample trade/order CSVs load into `trade_database` and read back (184 trades, 89 orders), and TCA calculations
   that read trades from MySQL succeed in the web UI and from Python.
+
+### eikon 1.1.2 -> 1.1.18
+
+- **File:** `requirements.txt`
+- **What changed:** `eikon==1.1.2` -> `eikon==1.1.18` (kept, not removed).
+- **Why:** eikon 1.1.2 depends on `requests-async==0.6.2`, which is no longer on PyPI (only up to 0.2.4 remains), so
+  `pip install` stopped with "No matching distribution found for requests-async==0.6.2". eikon 1.1.18 (Oct 2023, the
+  last release) uses `httpx` instead and installs on Python 3.7. `findatapy` 0.1.19 also requires `eikon` (unpinned),
+  so pip already installs 1.1.18 whenever the 1.1.2 pin is absent; this makes that explicit.
+- **How tested:** the image builds with it, and `import eikon` works in the built image. Eikon is only used by the
+  optional Refinitiv data source (`DatabaseSourceEikon` / `DatabasePopulatorEikon`, via findatapy); that path was
+  **not** tested, as it needs a Refinitiv Eikon/Workspace login and API key.
