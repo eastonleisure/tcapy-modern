@@ -504,3 +504,22 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   notebook list (`/tree`, HTTP 200 with the token; the login page without it). In a notebook kernel (run with
   `jupyter nbconvert --execute`), tcapy, pandas and plotly import, the sample market data reads from
   `../test/resources/`, and the running MongoDB and MySQL are reachable (market ticks and trades read back).
+
+### docker-compose.yml: mount `test/` and `tcapy/` into the jupyter home directory
+
+- **File:** `docker-compose.yml`
+- **What changed:** two more volumes on the jupyter service: `./test:/home/jovyan/test` (read-write) and
+  `./tcapy:/home/jovyan/tcapy:ro`, alongside the existing `tcapy_notebooks` and `tcapy_scripts` mounts.
+- **Why:** the notebooks use relative paths into the repo: `../test/resources/` for sample data and
+  `../tcapy/vis/report/templates/` for report templates. Without these mounts they failed with
+  "CSV file not found ../test/resources/small_test_trade_df.csv". The image has copies, but mounting the live folders
+  keeps them in step with the working tree (as is already done for the notebooks). `test/` is writable because
+  `populating_databases_for_tcapy.ipynb` writes its dump files to `../test/resources/` (it failed with
+  "Read-only file system" when mounted read-only); `tcapy/` is read-only.
+- **How tested:** before the mounts, three notebooks stopped at "CSV file not found ../test/resources/...". With them,
+  the notebooks get past those cells, and `populating_databases_for_tcapy.ipynb` loads the sample trades into MySQL,
+  reads them back and writes its dump files to `test/resources/` (its market-data section then needs a Dukascopy
+  download, see below).
+- **Remaining notebook limits (not fixable here):** five notebooks download market data live from Dukascopy, which
+  currently refuses findatapy's requests; `real_life_tcapy_case_study.ipynb` reads the original author's private file
+  `e:/cuemacro/tcapy/external/trade_2017.csv`; `excel_xlwings_with_tcapy.ipynb` needs Microsoft Excel.
