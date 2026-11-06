@@ -5,7 +5,6 @@ services:
     container_name: nginx
     ports:
       - 9500:9500
-      - 80:80
     volumes:
       - ./tcapy:/tcapy
       - ./tcapy/conf/tcapy_nginx_gunicorn_docker.conf:/etc/nginx/conf.d/default.conf

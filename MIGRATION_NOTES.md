@@ -391,3 +391,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   apps (8 x "Listening at: http://0.0.0.0:8090" and 4 x "...:8092", written before the split), while since the split
   `gunicorn_tcapyboard_error.log` contains only tcapyboard's (8092) and `gunicorn_tcapyboard_access.log` only
   tcapyboard's requests.
+
+### docker-compose.yml: drop nginx's unused port 80
+
+- **File:** `docker-compose.yml`
+- **What changed:** removed `- 80:80` from the nginx service's `ports`.
+- **Why:** nothing listens on port 80. The mounted `tcapy_nginx_gunicorn_docker.conf` replaces nginx's default site and
+  only defines `listen 9500`, so the published port 80 accepted connections and immediately reset them. It also
+  occupied port 80 on the host for no benefit (and can clash with anything else using it). Both apps are served on
+  9500 (`/tcapy/`, `/tcapyboard/`).
+- **How tested:** ran `nginx:1.27` with this config and both ports published: port 80 gives a connection reset
+  (curl exit 56, no HTTP response) and the container's only nginx listening socket is 9500, while 9500 serves
+  `/tcapy/` (HTTP 200).
