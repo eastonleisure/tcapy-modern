@@ -47,9 +47,13 @@ python-memcached==1.59
 numba
 vispy
 jinja2
-jupyterlab
-jupyter_nbextensions_configurator
-RISE
+jupyterlab==2.3.2
+jupyter_nbextensions_configurator==0.6.3
+RISE==5.7.1
+notebook==6.4.12
+nbconvert==6.0.7
+nbclient==0.5.13
+mistune==0.8.4
 bqplot
 WeasyPrint==51
 dask

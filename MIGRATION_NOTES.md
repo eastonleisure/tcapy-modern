@@ -66,3 +66,18 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** installed each package on its own into a copy of the working image, then imported both web apps
   (`tcapy_wsgi`, `tcapyboard_wsgi`): both fail with each package, and both import fine without them.
   For comparison, `jupyter-dash` and `bqplot` were tested the same way, caused no conflicts, and are kept.
+
+### Pin jupyterlab, jupyter_nbextensions_configurator and RISE to Jinja2 2.x-compatible releases
+
+- **File:** `requirements.txt`
+- **What changed:** `jupyterlab` -> `jupyterlab==2.3.2`, `jupyter_nbextensions_configurator` -> `==0.6.3`,
+  `RISE` -> `RISE==5.7.1`, and added `notebook==6.4.12`, `nbconvert==6.0.7`, `nbclient==0.5.13`, `mistune==0.8.4`.
+- **Why:** unpinned, these resolve to JupyterLab 3.6 / Notebook 6.5 / nbconvert 7.6, which require Jinja2 >= 3.0.
+  tcapy's web stack (Flask 1.1, Dash 1.20) needs Jinja2 < 3.0, so pip keeps Jinja2 2.11 and these tools install
+  broken: importing RISE or the configurator fails with
+  `ContextualVersionConflict: Jinja2 2.11.3 ... Requirement.parse('jinja2>=3.0'), {'nbconvert'}`.
+  The pinned releases are the newest that work with Jinja2 2.11, so the packages are kept rather than removed.
+- **How tested:** in a copy of the working image (which has the Jinja2 2.11 / Flask 1.1 pins): installed the pinned
+  set with no pip conflicts; both web apps still import; RISE and the configurator import; `jupyter lab` and
+  `jupyter notebook` both start and serve their main pages (`/lab` and `/tree` return 200). The unpinned set was tested
+  the same way and reproduced the conflict above.
