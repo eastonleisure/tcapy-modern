@@ -53,3 +53,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** the image builds with it, and `import eikon` works in the built image. Eikon is only used by the
   optional Refinitiv data source (`DatabaseSourceEikon` / `DatabasePopulatorEikon`, via findatapy); that path was
   **not** tested, as it needs a Refinitiv Eikon/Workspace login and API key.
+
+### Remove dtale and jupyter_contrib_nbextensions
+
+- **File:** `requirements.txt`
+- **What changed:** removed `dtale` and `jupyter_contrib_nbextensions` (both were unpinned).
+- **Why:** both pull in web-framework versions that tcapy's Flask 1.1 / Dash 1.20 web apps can't run with:
+  - `dtale` (latest for Python 3.7 is 3.22.0) upgrades Werkzeug to 2.2.3; Flask 1.1.4 needs Werkzeug < 2.0, and both
+    web apps then fail at import with `cannot import name 'BaseResponse' from 'werkzeug.wrappers'`.
+  - `jupyter_contrib_nbextensions` upgrades Jinja2 to 3.1.6; Flask 1.1.4 needs Jinja2 < 3.0, and the web apps fail.
+  Nothing in tcapy, its scripts, examples or notebooks imports either package.
+- **How tested:** installed each package on its own into a copy of the working image, then imported both web apps
+  (`tcapy_wsgi`, `tcapyboard_wsgi`): both fail with each package, and both import fine without them.
+  For comparison, `jupyter-dash` and `bqplot` were tested the same way, caused no conflicts, and are kept.
