@@ -853,3 +853,15 @@ Calculation-affecting fixes are not in this section; they are held for a separat
 - **How tested:** a compliance calculation produces the key `bar_trade_df_executed_notional_in_reporting_currency_by/sum/broker_id`
   (6 brokers); on the Compliance page the "Totals by Broker" table now shows all 6 brokers' executed notional and its
   CSV downloads.
+
+### InfluxDB: fix the ticker delete query
+
+- **File:** `tcapy/data/databasesource.py`
+- **What changed:** `engine.query("drop measurement \"%s\"..\"%s\""(table_name, ticker))` ->
+  `... "\"%s\"..\"%s\"" % (table_name, ticker))`.
+- **Why:** the `%` was missing, so Python tried to *call* the string, which always raised
+  `TypeError: 'str' object is not callable` (Python reports it as a SyntaxWarning when compiling). The surrounding
+  `except` turned that into "Didn't delete anything", so replacing a ticker's data in InfluxDB never deleted the old
+  data.
+- **How tested:** the file compiles without the warning. InfluxDB isn't part of this Docker setup, so the query itself
+  was not run against a server.

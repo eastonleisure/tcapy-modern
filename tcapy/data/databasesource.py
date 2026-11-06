@@ -3009,7 +3009,7 @@ class DatabaseSourceInfluxDB(DatabaseSourceTickData):
 
                     # Delete the data for a ticker
                     try:
-                        engine.query("drop measurement \"%s\"..\"%s\""(table_name, ticker))
+                        engine.query("drop measurement \"%s\"..\"%s\"" % (table_name, ticker))
                     except Exception as e:
                         logger.warning("Didn't delete anything from table %s for ticker %s" % (table_name, ticker))
 
