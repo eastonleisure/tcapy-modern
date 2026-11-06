@@ -760,3 +760,11 @@ PR description.
   builds every service that has a `build:` section.
 - **How tested:** `docker compose build tcapy` fails with "no such service: tcapy"; `docker compose build` builds all
   images.
+
+### Makefile: remove the `test_local` target
+
+- **File:** `Makefile`
+- **What changed:** removed `test_local`, which ran `docker compose -f docker-compose.local.test.yml run sut`.
+- **Why:** `docker-compose.local.test.yml` doesn't exist in the repo (it isn't in the original either), so the target
+  always failed. `make test` runs the test stack locally as well as in CI.
+- **How tested:** `make test_local` previously failed with "no such file or directory" for the compose file.

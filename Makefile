@@ -30,9 +30,6 @@ jupyter:
 test:
 	docker compose -f docker-compose.test.yml run sut
 
-test_local:
-	docker compose -f docker-compose.local.test.yml run sut
-
 doc:
 	docker compose -f docker-compose.test.yml run sut sphinx-build /source artifacts/build
 
