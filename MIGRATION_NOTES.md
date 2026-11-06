@@ -127,3 +127,18 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** against the running MongoDB (4.4): with pymongo 3.12.3, writing one day of EURUSD ticks (35,443) to a
   new Arctic library and reading them back returns all 35,443; the full test suite's Arctic read/write tests pass. With
   pymongo 4.7.3 the same write fails as above (reads alone still work, which is why it isn't obvious at first).
+
+### Pin numpy to 1.19.5
+
+- **File:** `requirements.txt`
+- **What changed:** `numpy` -> `numpy==1.19.5`.
+- **Why:** unpinned, pip installs numpy 1.21.6 (the last release for Python 3.7). tcapy's pinned `pyarrow==2.0.0`
+  can't convert numpy 1.20+ arrays, so TCA calculations fail when market data is converted:
+  `ArrowTypeError: ('Did not pass numpy.dtype object', 'Conversion failed for column bid with type float32')`.
+  numpy 1.20.3 fails the same way; 1.19.5 is the last 1.19 release and the newest that works with pyarrow 2.0.
+- **How tested:** a detailed TCA calculation on the sample data (EURUSD, 1-12 May 2017, slippage vs arrival) runs with
+  numpy 1.19.5 and fails with 1.20.3 and 1.21.6 as above. The full test suite and web UI ran on 1.19.5.
+- **Note on results:** this is a library version, not a change to tcapy's calculation code. The original repo can't be
+  built, so there's no earlier result to compare with. On 1.19.5 that calculation gives 25 trades, mean slippage
+  -0.000013700306 and sum of arrival prices 27.2910554409 - identical with or without the Celery workers and with
+  numba 0.53.1 or 0.56.4.
