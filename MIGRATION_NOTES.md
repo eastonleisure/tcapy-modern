@@ -591,3 +591,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   MySQL configuration as the app.
 - **How tested:** the test suite's MySQL tests (trade/order data written by the `fill_market_trade_databases` fixture
   and read by the TCA tests) pass against it.
+
+### Don't publish the test stack's ports on the host
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** removed the `ports:` from redis (6379), memcached (11211), mongo (27017) and mysql (3306).
+- **Why:** the tests reach these services over the test stack's own Docker network, so publishing them on the host
+  isn't needed - and those are the same host ports the main stack publishes, so the test stack couldn't start while the
+  app was running (Docker: "failed to set up container networking ... driver failed programming external connectivity").
+  It also kept the unauthenticated test Redis/memcached off the network. The stack can now be run alongside the app
+  with its own project name: `docker compose -p tcapy-test -f docker-compose.test.yml ...`.
+- **How tested:** with the main stack running, starting the test stack's redis/memcached failed with the error above;
+  without the published ports the whole test stack starts alongside it and the test suite runs.

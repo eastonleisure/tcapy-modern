@@ -40,24 +40,16 @@ services:
   redis:
     image: "redis:7.4-alpine"
     command: redis-server --port 6379 --save ""
-    ports:
-      - 6379:6379
 
   memcached:
     image: memcached:1.6
-    ports:
-      - 11211:11211
 
   mongo:
     image: mongo:4.4
     env_file: .tcapy.env
-    ports:
-      - 27017:27017
 
   mysql:
     image: mysql:8.0
     env_file: .tcapy.env
     environment:
       - MYSQL_DATABASE=trade_database_test_harness
-    ports:
-      - 3306:3306
