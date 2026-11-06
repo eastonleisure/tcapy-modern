@@ -534,3 +534,25 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   connect. The tcapy web services already list the same dependencies.
 - **How tested:** `docker compose config` shows the jupyter service depending on all five; from the jupyter container
   the notebook kernel reads from MongoDB and MySQL (see the build entry above).
+
+---
+
+## Corrections
+
+### Pin numba to 0.53.1 (fixes market data writes broken since the build fix)
+
+- **Files:** `requirements.txt`, `requirements.lock`
+- **What changed:** `numba` -> `numba==0.53.1`; in the lock, `numba==0.56.4` -> `numba==0.53.1` and
+  `llvmlite==0.39.1` -> `llvmlite==0.36.0` (numba 0.53.1 requires llvmlite < 0.37).
+- **Why:** during the build fix, numba was left unpinned because a TCA calculation on already-loaded data gave
+  identical results with numba 0.53.1 and 0.56.4 (see "Pin numpy to 1.19.5" above). That check never wrote market data.
+  fastparquet 0.4.1 (which tcapy uses to write Parquet) is numba-compiled, and with numba 0.56.4 writing market data
+  into Arctic from Parquet silently stores nothing: reading it back gives
+  `NoDataFoundException: No data found for ['EURUSD-...']`, and the test suite's data fixture fails with
+  `RuntimeError: numba jitted function aborted due to unresolved symbol`. So since the build fix, a fresh build could not
+  load market data. numba 0.53.1 is the version the stack was originally verified with.
+- **How tested:** loading the sample market data (`test/resources/small_test_market_df.parquet`) into Arctic and reading
+  1 May back: fails with numba 0.56.4, returns 35,443 ticks with 0.53.1. A from-scratch rebuild with the updated lock
+  matches it exactly (237 packages); both web apps import; the reference TCA calculation is unchanged (25 trades, mean
+  slippage -0.000013700306, sum of arrival prices 27.2910554409). The full test suite was run with this fix (see the
+  test stack section).
