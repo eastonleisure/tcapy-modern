@@ -313,3 +313,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   uploading 2.05 MB and 2.14 MB trade CSVs to tcapyboard (with this setting) reached tcapy, which read the files and
   validated them. (Those files were the sample trades repeated to exceed 1 MB, so tcapy then rejected their duplicated
   timestamps; a normal upload of the unrepeated sample computes all charts.)
+
+### docker-compose.yml: pin MySQL to 8.0
+
+- **File:** `docker-compose.yml`
+- **What changed:** `image: mysql` -> `image: mysql:8.0`.
+- **Why:** the untagged `mysql` image means `mysql:latest`, which is now MySQL 26.10. That version removed the
+  `--default-authentication-plugin` option this service starts with, so the container refuses to start:
+  `[ERROR] [MY-000067] [Server] unknown variable 'default-authentication-plugin=mysql_native_password'` followed by
+  `Aborting`. tcapy then has no trade database. MySQL 8.0 is the newest series that still accepts the option, and it
+  works with tcapy's `mysql-connector-python` 8.0.23.
+- **How tested:** started `mysql:latest` (26.10.0) and `mysql:8.0` (8.0.46) with the same command: 26.10 aborts as
+  above, 8.0 reaches "ready for connections". The stack has run on `mysql:8.0` throughout: trades and orders load into
+  `trade_database`, and the web UI and test suite read them.
