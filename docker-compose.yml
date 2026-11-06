@@ -19,8 +19,8 @@ services:
   jupyter:
     build:
       context: .
-      dockerfile: binder/Dockerfile
-      target: builder
+      dockerfile: Dockerfile
+      target: jupyter
     environment:
       - APP_ENV=docker
     env_file: .tcapy.env
@@ -29,12 +29,19 @@ services:
     depends_on:
       - redis
       - celery
+      - mongo
+      - mysql
+      - memcached
     volumes:
       - /tmp/csv:/tmp/csv
       - /tmp/tcapy:/tmp/tcapy
       - /data/csv_dump:/data/csv_dump
       - ./tcapy_notebooks:/home/jovyan/tcapy_notebooks
       - ./tcapy_scripts:/home/jovyan/tcapy_scripts
+      # the notebooks read ../test/resources/ (populating_databases also writes dump files there)
+      # and ../tcapy/vis/report/templates/
+      - ./test:/home/jovyan/test
+      - ./tcapy:/home/jovyan/tcapy:ro
 
   gunicorn_tcapy:
     build:

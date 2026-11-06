@@ -40,6 +40,31 @@ COPY ./test /test
 # Make sure tcapy on the PYTHONPATH
 ENV PYTHONPATH "${PYTHONPATH}:/tcapy"
 
+#### Jupyter notebook server with tcapy (replaces binder/Dockerfile's base image, tschm/jupyter:1.2.0, which no longer
+#### exists). The notebook packages (notebook, nbconvert, jupyterlab, ...) are already in requirements.txt / the lock.
+FROM builder as jupyter
+
+ARG NB_USER=jovyan
+ARG NB_UID=1000
+ENV NB_USER=${NB_USER} HOME=/home/${NB_USER}
+
+RUN useradd -m -s /bin/bash -u ${NB_UID} ${NB_USER}
+
+# Same layout as the repo root, which the notebooks rely on (eg. ../test/resources/, ../tcapy/vis/report/templates/)
+COPY --chown=${NB_UID} ./tcapy_notebooks ${HOME}/tcapy_notebooks
+COPY --chown=${NB_UID} ./tcapy_scripts ${HOME}/tcapy_scripts
+COPY --chown=${NB_UID} ./tcapy_examples ${HOME}/tcapy_examples
+COPY --chown=${NB_UID} ./test ${HOME}/test
+COPY --chown=${NB_UID} ./tcapy ${HOME}/tcapy
+
+USER ${NB_USER}
+WORKDIR ${HOME}
+
+EXPOSE 8888
+
+# Access token: set JUPYTER_TOKEN (eg. in .tcapy.env); otherwise Jupyter generates one and prints it in the log
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
+
 #### Here's the test-configuration
 FROM builder as test
 

@@ -472,3 +472,65 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   ```
   docker compose exec -T mysql bash -s < docker/mysql-init/10-tcapy-test-harness.sh
   ```
+
+---
+
+## Jupyter
+
+### Add a `jupyter` stage to the Dockerfile
+
+- **File:** `Dockerfile`
+- **What changed:** a new `jupyter` build stage on top of `builder` (the tcapy image). It adds a `jovyan` user (UID
+  1000), copies `tcapy_notebooks`, `tcapy_scripts`, `tcapy_examples`, `test` and `tcapy` into its home directory, and
+  runs the classic Jupyter Notebook server on port 8888.
+- **Why:** the jupyter service was built from `binder/Dockerfile`, whose base image `tschm/jupyter:1.2.0` has been
+  removed from Docker Hub ("pull access denied ... repository does not exist"), so the service could not be built at
+  all. Building on the tcapy image reuses its pinned packages - `notebook` 6.4.12, `nbconvert` 6.0.7, `jupyterlab`
+  2.3.2 are already in `requirements.txt`/`requirements.lock` - so the notebooks run against exactly the same
+  tcapy/pandas/numpy as the web apps. The copied folders recreate the repo-root layout the notebooks expect
+  (`../test/resources/`, `../tcapy/vis/report/templates/`), as the old binder image did by copying the whole repo.
+- **Access token:** Jupyter reads `JUPYTER_TOKEN` (eg. put `JUPYTER_TOKEN=<random string>` in `.tcapy.env`). Without
+  it, Jupyter generates a token and prints the login URL in `docker compose logs jupyter`.
+- **How tested:** see the next entry (tested together with the compose service).
+
+### docker-compose.yml: build the jupyter service from the new stage
+
+- **File:** `docker-compose.yml`
+- **What changed:** the jupyter service's build now uses `dockerfile: Dockerfile`, `target: jupyter` instead of
+  `dockerfile: binder/Dockerfile`, `target: builder`.
+- **Why:** `binder/Dockerfile` can't be built (its base image no longer exists), so `docker compose up` / `build`
+  failed for this service. `binder/Dockerfile` itself is left unchanged; it is no longer used by docker-compose.
+- **How tested:** `docker compose build jupyter` builds; the container starts Jupyter Notebook 6.4.12 and serves the
+  notebook list (`/tree`, HTTP 200 with the token; the login page without it). In a notebook kernel (run with
+  `jupyter nbconvert --execute`), tcapy, pandas and plotly import, the sample market data reads from
+  `../test/resources/`, and the running MongoDB and MySQL are reachable (market ticks and trades read back).
+
+### docker-compose.yml: mount `test/` and `tcapy/` into the jupyter home directory
+
+- **File:** `docker-compose.yml`
+- **What changed:** two more volumes on the jupyter service: `./test:/home/jovyan/test` (read-write) and
+  `./tcapy:/home/jovyan/tcapy:ro`, alongside the existing `tcapy_notebooks` and `tcapy_scripts` mounts.
+- **Why:** the notebooks use relative paths into the repo: `../test/resources/` for sample data and
+  `../tcapy/vis/report/templates/` for report templates. Without these mounts they failed with
+  "CSV file not found ../test/resources/small_test_trade_df.csv". The image has copies, but mounting the live folders
+  keeps them in step with the working tree (as is already done for the notebooks). `test/` is writable because
+  `populating_databases_for_tcapy.ipynb` writes its dump files to `../test/resources/` (it failed with
+  "Read-only file system" when mounted read-only); `tcapy/` is read-only.
+- **How tested:** before the mounts, three notebooks stopped at "CSV file not found ../test/resources/...". With them,
+  the notebooks get past those cells, and `populating_databases_for_tcapy.ipynb` loads the sample trades into MySQL,
+  reads them back and writes its dump files to `test/resources/` (its market-data section then needs a Dukascopy
+  download, see below).
+- **Remaining notebook limits (not fixable here):** five notebooks download market data live from Dukascopy, which
+  currently refuses findatapy's requests; `real_life_tcapy_case_study.ipynb` reads the original author's private file
+  `e:/cuemacro/tcapy/external/trade_2017.csv`; `excel_xlwings_with_tcapy.ipynb` needs Microsoft Excel.
+
+### docker-compose.yml: start the databases with the jupyter service
+
+- **File:** `docker-compose.yml`
+- **What changed:** the jupyter service's `depends_on` now also lists `mongo`, `mysql` and `memcached` (it had only
+  `redis` and `celery`).
+- **Why:** the notebooks read market data from MongoDB (Arctic), trades from MySQL, and use memcached as Celery's
+  result store. With `docker compose up jupyter` on its own, Compose didn't start those, so notebook cells failed to
+  connect. The tcapy web services already list the same dependencies.
+- **How tested:** `docker compose config` shows the jupyter service depending on all five; from the jupyter container
+  the notebook kernel reads from MongoDB and MySQL (see the build entry above).
