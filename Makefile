@@ -22,7 +22,7 @@ help:
 
 
 build:
-	docker compose build tcapy
+	docker compose build
 
 jupyter:
 	docker compose build jupyter

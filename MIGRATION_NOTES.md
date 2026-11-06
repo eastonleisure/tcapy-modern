@@ -750,3 +750,13 @@ PR description.
   GitHub's `ubuntu-latest` runners, so `make test` in CI would fail with "docker-compose: command not found" even after
   the actions were fixed. `docker compose` (v2) is on the runners and in Docker Desktop.
 - **How tested:** `make test` runs the test stack with `docker compose` (last entry).
+
+### Makefile: `make build` builds the images
+
+- **File:** `Makefile`
+- **What changed:** `docker compose build tcapy` -> `docker compose build`.
+- **Why:** `docker-compose.yml` has no service called `tcapy` (they are `gunicorn_tcapy`, `gunicorn_tcapyboard`,
+  `celery`, `jupyter`, ...), so `make build` failed with "no such service: tcapy". Without a service name, Compose
+  builds every service that has a `build:` section.
+- **How tested:** `docker compose build tcapy` fails with "no such service: tcapy"; `docker compose build` builds all
+  images.
