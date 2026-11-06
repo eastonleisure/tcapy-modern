@@ -556,3 +556,18 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   matches it exactly (237 packages); both web apps import; the reference TCA calculation is unchanged (25 trades, mean
   slippage -0.000013700306, sum of arrival prices 27.2910554409). The full test suite was run with this fix (see the
   test stack section).
+
+---
+
+## Test stack (`docker-compose.test.yml`, Dockerfile `test` stage)
+
+### Fix the test Redis startup option
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** `redis-server --server_port 6379 --save ""` -> `redis-server --port 6379 --save ""`.
+- **Why:** Redis has no `--server_port` option. The test Redis exited immediately with
+  `*** FATAL CONFIG FILE ERROR *** Bad directive or wrong number of arguments` (exit code 1), so the test stack had no
+  Redis - which tcapy uses for its results cache and as the Celery broker. `--port` is the correct option (and what
+  the main `docker-compose.yml` uses).
+- **How tested:** `redis-server --server_port 6379 --save ""` on `redis:7.4-alpine` exits with the error above;
+  with `--port` Redis starts, and the test suite's Redis-backed tests run against it.
