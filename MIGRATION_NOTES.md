@@ -534,3 +534,128 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   connect. The tcapy web services already list the same dependencies.
 - **How tested:** `docker compose config` shows the jupyter service depending on all five; from the jupyter container
   the notebook kernel reads from MongoDB and MySQL (see the build entry above).
+
+---
+
+## Corrections
+
+### Pin numba to 0.53.1 (fixes market data writes broken since the build fix)
+
+- **Files:** `requirements.txt`, `requirements.lock`
+- **What changed:** `numba` -> `numba==0.53.1`; in the lock, `numba==0.56.4` -> `numba==0.53.1` and
+  `llvmlite==0.39.1` -> `llvmlite==0.36.0` (numba 0.53.1 requires llvmlite < 0.37).
+- **Why:** during the build fix, numba was left unpinned because a TCA calculation on already-loaded data gave
+  identical results with numba 0.53.1 and 0.56.4 (see "Pin numpy to 1.19.5" above). That check never wrote market data.
+  fastparquet 0.4.1 (which tcapy uses to write Parquet) is numba-compiled, and with numba 0.56.4 writing market data
+  into Arctic from Parquet silently stores nothing: reading it back gives
+  `NoDataFoundException: No data found for ['EURUSD-...']`, and the test suite's data fixture fails with
+  `RuntimeError: numba jitted function aborted due to unresolved symbol`. So since the build fix, a fresh build could not
+  load market data. numba 0.53.1 is the version the stack was originally verified with.
+- **How tested:** loading the sample market data (`test/resources/small_test_market_df.parquet`) into Arctic and reading
+  1 May back: fails with numba 0.56.4, returns 35,443 ticks with 0.53.1. A from-scratch rebuild with the updated lock
+  matches it exactly (237 packages); both web apps import; the reference TCA calculation is unchanged (25 trades, mean
+  slippage -0.000013700306, sum of arrival prices 27.2910554409). The full test suite was run with this fix (see the
+  test stack section).
+
+---
+
+## Test stack (`docker-compose.test.yml`, Dockerfile `test` stage)
+
+### Fix the test Redis startup option
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** `redis-server --server_port 6379 --save ""` -> `redis-server --port 6379 --save ""`.
+- **Why:** Redis has no `--server_port` option. The test Redis exited immediately with
+  `*** FATAL CONFIG FILE ERROR *** Bad directive or wrong number of arguments` (exit code 1), so the test stack had no
+  Redis - which tcapy uses for its results cache and as the Celery broker. `--port` is the correct option (and what
+  the main `docker-compose.yml` uses).
+- **How tested:** `redis-server --server_port 6379 --save ""` on `redis:7.4-alpine` exits with the error above;
+  with `--port` Redis starts, and the test suite's Redis-backed tests run against it.
+
+### Pin the test stack's images to the main stack's versions
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** `redis:alpine` -> `redis:7.4-alpine`, `memcached` -> `memcached:1.6`, `mongo:latest` -> `mongo:4.4`,
+  `mysql` -> `mysql:8.0`.
+- **Why:** the tests should run against the same database versions as the app (pinned in `docker-compose.yml`).
+  Untagged `mysql` is now MySQL 26.10, which aborts at startup with this file's
+  `--default-authentication-plugin` option ("unknown variable"), so the test stack had no MySQL either.
+- **How tested:** the full test suite runs on these images (see the last entry in this section).
+
+### Use MySQL 8's default authentication in the test stack
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** removed `command: --default-authentication-plugin=mysql_native_password` from the test MySQL.
+- **Why:** same as for the main stack (see the MySQL section): the option and plugin are deprecated in MySQL 8.0, and
+  tcapy's `mysql-connector-python` 8.0.23 supports the default `caching_sha2_password`. Keeps the tests on the same
+  MySQL configuration as the app.
+- **How tested:** the test suite's MySQL tests (trade/order data written by the `fill_market_trade_databases` fixture
+  and read by the TCA tests) pass against it.
+
+### Don't publish the test stack's ports on the host
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** removed the `ports:` from redis (6379), memcached (11211), mongo (27017) and mysql (3306).
+- **Why:** the tests reach these services over the test stack's own Docker network, so publishing them on the host
+  isn't needed - and those are the same host ports the main stack publishes, so the test stack couldn't start while the
+  app was running (Docker: "failed to set up container networking ... driver failed programming external connectivity").
+  It also kept the unauthenticated test Redis/memcached off the network. The stack can now be run alongside the app
+  with its own project name: `docker compose -p tcapy-test -f docker-compose.test.yml ...`.
+- **How tested:** with the main stack running, starting the test stack's redis/memcached failed with the error above;
+  without the published ports the whole test stack starts alongside it and the test suite runs.
+
+### Remove the obsolete `version` key from the test stack (and document how to run it)
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** removed `version: '3.6'` (as in `docker-compose.yml`) and added a header comment with the command
+  to run the suite.
+- **Why:** Compose v2 ignores the key and warns about it on every command.
+- **How tested:** `docker compose -f docker-compose.test.yml config` reports no warning and resolves all services.
+
+### Wait for Redis, MongoDB and MySQL to be ready before running tests
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** health checks for redis (`redis-cli ping`), mongo (`db.adminCommand('ping')`) and mysql (log in as
+  `MYSQL_USER` over TCP), and `sut`/`celery` now use `depends_on: ... condition: service_healthy` for them.
+- **Why:** plain `depends_on` only waits for a container to *start*, not for the service in it to be ready. A fresh
+  MySQL refuses connections ("ERROR 2003 (HY000): Can't connect") for about 25 seconds while it initialises (the
+  `-h 127.0.0.1` check also skips the temporary server the MySQL image runs during initialisation), so tests that
+  reached MySQL early failed for reasons unrelated to tcapy.
+- **How tested:** a fresh test MySQL first accepted the test user over TCP after 25s; with the health checks, `sut`
+  starts only once all three report healthy, and the test suite's database tests pass.
+
+### Keep the test image's packages compatible with tcapy
+
+- **File:** `Dockerfile` (`test` stage)
+- **What changed:** the test-only packages are installed with `-c requirements.lock` (like the main image), with
+  `sphinx==4.5.0` and `pytest-html==3.2.0` pinned.
+- **Why:** unpinned, pip installs Sphinx 5.3, which requires Jinja2 3 and upgrades it to 3.1.6 inside the test image.
+  tcapy's Flask 1.1/Dash 1.20 need Jinja2 < 3, so in the test image the web modules failed to import
+  (`ImportError: cannot import name 'escape' from 'jinja2'`) - tests would run against a different, broken set of
+  packages than the app. Sphinx 4.5.0 is the newest that works with Jinja2 2.11. The lock keeps pytest, Jinja2 etc.
+  at the app's versions.
+- **How tested:** with the original line, pip reported "flask 1.1.4 has requirement Jinja2<3.0 ... you'll have jinja2
+  3.1.6" and `import tcapy_wsgi` failed as above. With this change the test image keeps Jinja2 2.11.3 and both web
+  modules import. Sphinx 4.5.0 runs, but the Makefile's `doc` target still has nothing to build: the repo's `source/`
+  folder only contains a `.gitkeep` and no Sphinx `conf.py` (true in the original repo too).
+
+### Lock the test image's extra packages
+
+- **File:** `requirements.lock`
+- **What changed:** appended the 19 packages that only the test image installs (pytest-html, Sphinx, mongomock,
+  httpretty, requests-mock and their dependencies), under a comment line, with their exact versions.
+- **Why:** the test stage installs with `-c requirements.lock`, but these packages weren't in the lock (it was generated
+  from the main image), so they still floated to whatever was newest at build time. Locking them makes the test image
+  reproducible like the main one. The main image is unaffected: constraints only apply to packages that are installed.
+- **How tested:** rebuilt the test image with the extended lock and compared `pip freeze` with the lock: identical.
+
+### Test suite result with the test stack fixed
+
+Full suite (`docker compose -p tcapy-test -f docker-compose.test.yml up --build --exit-code-from sut`, all tests
+including multithreading), on this branch plus the numba fix, run alongside the main stack: **40 passed, 6 failed**
+(the original test stack couldn't start at all). The 6 failures:
+- `test_data_vendor_feed.py` (4 tests): Dukascopy currently refuses findatapy's download requests (HTTP 403).
+- `test_overlapping_data_caching.py::test_overlapping_full_detailed_tca_calculation`: the test reads the test-harness
+  databases without requesting the fixture that fills them (fixed separately in the bug fixes).
+- `test_results_agg.py::test_histogram_generator`: a tcapy bug in the histogram min/max, held for a separate decision
+  (`TCA_QUESTIONS.md`).

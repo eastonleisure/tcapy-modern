@@ -55,7 +55,7 @@ importlib-metadata==4.13.0
 pytest-tap
 kombu
 python-memcached==1.59
-numba
+numba==0.53.1
 vispy
 Jinja2==2.11.3
 jupyterlab==2.3.2

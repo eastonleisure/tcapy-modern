@@ -125,7 +125,7 @@ kaleido==0.2.1
 keyring==24.1.1
 kiwisolver==1.4.5
 kombu==5.2.4
-llvmlite==0.39.1
+llvmlite==0.36.0
 locket==1.0.0
 lxml==5.4.0
 lz4==4.3.2
@@ -145,7 +145,7 @@ nbconvert==6.0.7
 nbformat==5.8.0
 nest-asyncio==1.6.0
 notebook==6.4.12
-numba==0.56.4
+numba==0.53.1
 numpy==1.19.5
 oauthlib==3.2.2
 openpyxl==3.1.3
@@ -239,3 +239,23 @@ zict==2.2.0
 zipp==3.15.0
 zope.interface==6.4.post2
 zstandard==0.21.0
+# --- extra packages for the test image (Dockerfile 'test' stage)
+alabaster==0.7.13
+Babel==2.14.0
+docutils==0.17.1
+httpretty==1.1.4
+imagesize==1.5.0
+mongomock==4.3.0
+py==1.11.0
+pytest-html==3.2.0
+pytest-metadata==3.0.0
+requests-mock==1.12.1
+sentinels==1.0.0
+snowballstemmer==3.1.1
+Sphinx==4.5.0
+sphinxcontrib-applehelp==1.0.2
+sphinxcontrib-devhelp==1.0.2
+sphinxcontrib-htmlhelp==2.0.0
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==1.0.3
+sphinxcontrib-serializinghtml==1.1.5

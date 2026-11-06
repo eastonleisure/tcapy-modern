@@ -1,4 +1,6 @@
-version: '3.6'
+# Test stack: run with
+#   docker compose -p tcapy-test -f docker-compose.test.yml up --build --exit-code-from sut
+# No ports are published to the host, so it can run alongside the main tcapy stack.
 services:
   sut:
     build:
@@ -14,11 +16,16 @@ services:
     environment:
       - APP_ENV=docker
     depends_on:
-      - celery
-      - redis
-      - memcached
-      - mongo
-      - mysql
+      celery:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
 
   celery:
     build:
@@ -32,33 +39,42 @@ services:
       - APP_ENV=docker
       - C_FORCE_ROOT=true
     depends_on:
-      - redis
-      - mongo
-      - mysql
-      - memcached
+      redis:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
 
   redis:
-    image: "redis:alpine"
-    command: redis-server --server_port 6379 --save ""
-    ports:
-      - 6379:6379
+    image: "redis:7.4-alpine"
+    command: redis-server --port 6379 --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
 
   memcached:
-    image: memcached
-    ports:
-      - 11211:11211
+    image: memcached:1.6
 
   mongo:
-    image: mongo:latest
+    image: mongo:4.4
     env_file: .tcapy.env
-    ports:
-      - 27017:27017
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      retries: 60
 
   mysql:
-    image: mysql
-    command: --default-authentication-plugin=mysql_native_password
+    image: mysql:8.0
     env_file: .tcapy.env
     environment:
       - MYSQL_DATABASE=trade_database_test_harness
-    ports:
-      - 3306:3306
+    healthcheck:
+      # Only healthy once the real server (not the init-time temporary one) accepts TCP connections
+      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      retries: 60
+
