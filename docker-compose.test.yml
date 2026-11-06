@@ -38,24 +38,24 @@ services:
       - memcached
 
   redis:
-    image: "redis:alpine"
+    image: "redis:7.4-alpine"
     command: redis-server --port 6379 --save ""
     ports:
       - 6379:6379
 
   memcached:
-    image: memcached
+    image: memcached:1.6
     ports:
       - 11211:11211
 
   mongo:
-    image: mongo:latest
+    image: mongo:4.4
     env_file: .tcapy.env
     ports:
       - 27017:27017
 
   mysql:
-    image: mysql
+    image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
     env_file: .tcapy.env
     environment:

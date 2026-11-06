@@ -571,3 +571,13 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   the main `docker-compose.yml` uses).
 - **How tested:** `redis-server --server_port 6379 --save ""` on `redis:7.4-alpine` exits with the error above;
   with `--port` Redis starts, and the test suite's Redis-backed tests run against it.
+
+### Pin the test stack's images to the main stack's versions
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** `redis:alpine` -> `redis:7.4-alpine`, `memcached` -> `memcached:1.6`, `mongo:latest` -> `mongo:4.4`,
+  `mysql` -> `mysql:8.0`.
+- **Why:** the tests should run against the same database versions as the app (pinned in `docker-compose.yml`).
+  Untagged `mysql` is now MySQL 26.10, which aborts at startup with this file's
+  `--default-authentication-plugin` option ("unknown variable"), so the test stack had no MySQL either.
+- **How tested:** the full test suite runs on these images (see the last entry in this section).
