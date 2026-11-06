@@ -7,6 +7,7 @@ downloader mishandles failures. Fixed here, at image build time:
   incremented the attempt counter, so it could loop forever.
 - `download_tick`: if every multithreaded download attempt failed, `tick_list` was never assigned, raising
   UnboundLocalError instead of returning no data.
+- It used the old http:// URL, which Dukascopy redirects to https.
 Note: Dukascopy's CDN currently answers findatapy's plain requests with 403 Forbidden. That is deliberately NOT worked
 around here (upstream findatapy >= 0.1.37 sends a browser User-Agent); with these fixes a blocked download is reported
 as a failed download instead of crashing or retrying forever.
@@ -117,6 +118,14 @@ web = replace_once(web,
             completed = False
             tick_list = []  # patched: stays empty (-> no data) if every attempt below fails
 """, 'download_tick multithreaded block')
+
+# --- https base URL (as upstream)
+const = open(const_py).read()
+const = replace_once(const,
+                     'dukascopy_base_url = "http://www.dukascopy.com/datafeed/"',
+                     'dukascopy_base_url = "https://www.dukascopy.com/datafeed/"',
+                     'dukascopy_base_url')
+open(const_py, 'w').write(const)
 
 open(web_py, 'w').write(web)
 

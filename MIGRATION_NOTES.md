@@ -700,3 +700,18 @@ fixes make a refused or failed download fail quickly and cleanly instead.
   tcapy's data-vendor tests failed with exactly this error.
 - **How tested:** with every download attempt made to fail: original - `UnboundLocalError`; patched - returns `None`
   (no data), which tcapy reports as a failed download.
+
+### Use the https Dukascopy URL
+
+- **File:** `docker/patch_findatapy_dukascopy.py`
+- **What changed:** findatapy's `dukascopy_base_url` from `http://www.dukascopy.com/datafeed/` to
+  `https://www.dukascopy.com/datafeed/` (as in upstream findatapy).
+- **Why:** Dukascopy redirects the http URL to https, so every request made an extra round trip over plain HTTP first.
+- **How tested:** `DataConstants().dukascopy_base_url` is the https URL after patching, and requests to it get the same
+  responses as before (currently 403).
+
+### Data-vendor tests after these fixes
+
+With the patched image, `test/test_tcapy/test_data_vendor_feed.py` still fails (4 tests), because Dukascopy refuses the
+downloads, but now quickly and with a clear cause instead of crashing or retrying indefinitely - see the result in the
+PR description.
