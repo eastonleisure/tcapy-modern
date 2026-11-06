@@ -116,3 +116,14 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** with 1.3.24, writing the sample orders to MySQL and reading the trades back both work (52 EURUSD trades
   for 1-12 May 2017), and the full test suite and web UI ran on it. SQLAlchemy 1.4.54 also passed this read/write check,
   but 1.3.24 is the version the full test suite was run with.
+
+### Pin pymongo to 3.12.3
+
+- **File:** `requirements.txt`
+- **What changed:** added `pymongo==3.12.3` (it was not listed; arctic pulls it in unpinned).
+- **Why:** arctic 1.79.4, which tcapy uses to store market tick data in MongoDB, requires pymongo but doesn't cap its
+  version, so pip installs pymongo 4.x (4.7.3 on Python 3.7). pymongo 4 removed and changed APIs arctic relies on:
+  writing market data to Arctic fails with `InvalidOperation: Cannot use MongoClient after close`.
+- **How tested:** against the running MongoDB (4.4): with pymongo 3.12.3, writing one day of EURUSD ticks (35,443) to a
+  new Arctic library and reading them back returns all 35,443; the full test suite's Arctic read/write tests pass. With
+  pymongo 4.7.3 the same write fails as above (reads alone still work, which is why it isn't obvious at first).
