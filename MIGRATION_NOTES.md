@@ -865,3 +865,13 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   data.
 - **How tested:** the file compiles without the warning. InfluxDB isn't part of this Docker setup, so the query itself
   was not run against a server.
+
+### Compare strings with `==`, not `is` (chart direction)
+
+- **File:** `tcapy/vis/candlestick.py`
+- **What changed:** `direction is 'increasing'` / `'decreasing'` -> `==`.
+- **Why:** `is` checks whether two strings are the same object, not whether they're equal. It happens to work for
+  string literals (Python reuses them) but not for equal strings built at runtime, eg. from configuration, where the
+  branch is silently skipped. Python 3.8+ warns about it ("SyntaxWarning: 'is' with a literal").
+- **How tested:** the file compiles without the warning; candlestick charts render on the Detailed page. In the current
+  code the values passed are literals, so no behaviour change is visible today.
