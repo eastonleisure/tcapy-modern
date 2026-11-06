@@ -217,3 +217,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   With tzlocal 2.1, CHUNK_STORE, TICK_STORE and VERSION_STORE all write and read back 35,443 ticks. With tzlocal 5.1,
   TICK_STORE fails as above. The full test suite's five Arctic tests failed with this error before the pin and pass
   with it.
+
+### chartpy 0.1.8 -> 0.1.10
+
+- **File:** `requirements.txt`
+- **What changed:** `chartpy==0.1.8` -> `chartpy==0.1.10`.
+- **Why:** both web apps import `chartpy.dashboard` (`tcapy/vis/app_imports.py`: `from chartpy.dashboard import
+  CallbackManager, SessionManager`), which chartpy 0.1.8 doesn't have, so they failed at start with
+  `ModuleNotFoundError: No module named 'chartpy.dashboard'`. The module first appears in 0.1.9. chartpy only draws
+  charts; it isn't involved in TCA calculations.
+- **How tested:** installed each release into a copy of the working image and imported `chartpy.dashboard`,
+  `tcapy_wsgi` and `tcapyboard_wsgi`: all fail on 0.1.8 and all work on 0.1.9, 0.1.10, 0.1.11 and 0.1.12. 0.1.10 is
+  pinned because the full test suite and every web page (charts included) were run with it.
