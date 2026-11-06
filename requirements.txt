@@ -13,6 +13,11 @@ pathos
 multiprocess
 fastparquet==0.4.1
 flask-restplus==0.13.0
+Flask==1.1.4
+Werkzeug==0.16.1
+MarkupSafe==2.0.1
+itsdangerous==1.1.0
+click<8
 gunicorn
 beautifulsoup4
 pdfkit==0.6.1
@@ -46,7 +51,7 @@ kombu
 python-memcached==1.59
 numba
 vispy
-jinja2
+Jinja2==2.11.3
 jupyterlab==2.3.2
 jupyter_nbextensions_configurator==0.6.3
 RISE==5.7.1

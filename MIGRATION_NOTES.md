@@ -81,3 +81,25 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   set with no pip conflicts; both web apps still import; RISE and the configurator import; `jupyter lab` and
   `jupyter notebook` both start and serve their main pages (`/lab` and `/tree` return 200). The unpinned set was tested
   the same way and reproduced the conflict above.
+
+### Pin the Flask 1.1 web stack
+
+- **File:** `requirements.txt`
+- **What changed:** `jinja2` -> `Jinja2==2.11.3`; added `Flask==1.1.4`, `Werkzeug==0.16.1`, `MarkupSafe==2.0.1`,
+  `itsdangerous==1.1.0`, `click<8`.
+- **Why:** tcapy's web apps run on Dash 1.20 / Flask 1.1, and its REST API on flask-restplus 0.13. Unpinned, pip installs
+  newer releases that removed APIs these use. Each pin was tested by upgrading just that package:
+
+  | Unpinned to | Result |
+  |---|---|
+  | Werkzeug 1.x | REST API fails: `cannot import name 'cached_property' from 'werkzeug'` |
+  | Werkzeug 2.x | both web apps fail: `cannot import name 'BaseResponse' from 'werkzeug.wrappers'` |
+  | MarkupSafe 2.1 | both web apps fail: `cannot import name 'soft_unicode' from 'markupsafe'` |
+  | Jinja2 3.x | both web apps fail: `cannot import name 'escape' from 'jinja2'` |
+  | itsdangerous 2.x | both web apps fail: `cannot import name 'json' from 'itsdangerous'` |
+  | Flask 2.x | both web apps fail: `unexpected keyword argument 'unbound_message'` |
+
+  `click<8` matches what Flask 1.1.4 (`click<8.0`) and Celery 5.0.5 (`click<8.0`) declare.
+- **How tested:** with these pins both web apps (`tcapy_wsgi`, `tcapyboard_wsgi`) and `flask_restplus` import, and the
+  web UI serves and runs TCA calculations on all pages. The failures above come from upgrading one package at a time
+  in a copy of the working image.
