@@ -30,3 +30,14 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   configure such projects anyway; it changes nothing for packages that don't use CMake.
 - **How tested:** without it the image build failed with `Failed building wheel for blosc` and the CMake error above.
   With it, blosc compiles and installs, and `import blosc` works in the built image.
+
+### mysql-connector-python 8.0.19 -> 8.0.23
+
+- **File:** `requirements.txt`
+- **What changed:** `mysql-connector-python==8.0.19` -> `mysql-connector-python==8.0.23`.
+- **Why:** 8.0.19 is no longer on PyPI, so `pip install` stopped with "No matching distribution found for
+  mysql-connector-python==8.0.19". PyPI's list for this platform jumps from 8.0.5 to 8.0.23; 8.0.23 is the closest
+  available release in the same 8.0 series.
+- **How tested:** the image build gets past this package. In the running stack, tcapy connects to MySQL 8.0 with it:
+  the sample trade/order CSVs load into `trade_database` and read back (184 trades, 89 orders), and TCA calculations
+  that read trades from MySQL succeed in the web UI and from Python.
