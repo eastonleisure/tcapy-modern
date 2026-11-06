@@ -50,7 +50,7 @@ venue_filter = 'venue1'
 
 ########################################################################################################################
 
-def test_overlapping_full_detailed_tca_calculation():
+def test_overlapping_full_detailed_tca_calculation(fill_market_trade_databases):
     """Tests a detailed TCA calculation works with caching and overlapping dates, checking that it has the right tables returned.
     """
 

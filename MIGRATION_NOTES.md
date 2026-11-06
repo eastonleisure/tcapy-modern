@@ -941,3 +941,13 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   setting; adjust it to your data.
 - **How tested:** the Start/Finish Date dropdowns offer 2017 dates, and calculations for May 2017 run on the Aggregated
   and Compliance pages.
+
+### Test: load the test data before the overlapping-cache test
+
+- **File:** `test/test_tcapy/test_overlapping_data_caching.py`
+- **What changed:** `test_overlapping_full_detailed_tca_calculation` now takes the `fill_market_trade_databases`
+  fixture.
+- **Why:** it reads the test-harness MySQL and Arctic tables, but never asked for the fixture that fills them (every
+  other test that needs that data does), so it only passed if an earlier test happened to leave the data behind. In a
+  clean test stack it failed with `KeyError: 'sparse_market_trade_df'` (no trades found).
+- **How tested:** the full test suite (see the PR) - this test passes.
