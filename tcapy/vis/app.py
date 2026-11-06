@@ -143,11 +143,17 @@ def serve_csv():
 
     dataFrame = flask.request.args.get('dataFrame')
 
-    strIO = display_listeners.create_df_as_csv_string(dataFrame)
+    if dataFrame is None:
+        flask.abort(400, 'No dataFrame specified')
 
-    return flask.send_file(strIO,
+    csv_bytes = display_listeners.create_df_as_csv_string(dataFrame)
+
+    if csv_bytes is None:
+        flask.abort(404, 'No results for ' + dataFrame + ' - run the calculation first')
+
+    return flask.send_file(csv_bytes,
                      mimetype='text/csv',
-                     attachment_filename=dataFrame.replace('-', '_') + '.csv',
+                     attachment_filename=dataFrame.replace('-', '_').replace('/', '_') + '.csv',
                      as_attachment=True)
 
 @app.server.route('/favicon.ico')

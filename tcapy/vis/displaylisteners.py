@@ -17,6 +17,7 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+from io import BytesIO
 
 import dash_html_components as html
 
@@ -541,11 +542,15 @@ class DisplayListeners(object):
         """
         df_csv = self._plot_render.convert_df_csv(self._tca_caller.get_cached_computation_analysis(key=trade_order_tag))
 
-        strIO = StringIO()
-        strIO.write(df_csv)
-        strIO.seek(0)
+        # Nothing cached under this key (eg. not calculated yet, or the session's cache was cleared)
+        if df_csv is None:
+            return None
 
-        return strIO
+        # Send bytes: WSGI servers (eg. gunicorn) can't stream a text StringIO, so the download would be empty
+        bytesIO = BytesIO(df_csv.encode('utf-8'))
+        bytesIO.seek(0)
+
+        return bytesIO
 
     def _create_df_dictionary_key(self, trade_order_tag):
         """Breaks down a trade/order _tag, into the _tag, metric and how it should be partitioned.

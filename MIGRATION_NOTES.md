@@ -827,3 +827,17 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   the failing request is gone.
 - **How tested:** before, that URL was the only failing request on the page (404); after, no request fails, and the page
   layout (fonts, control positions) is unchanged.
+
+### Web apps: make the "Download CSV" links work
+
+- **Files:** `tcapy/vis/displaylisteners.py`, `tcapy/vis/app.py`, `tcapy/vis/app_board.py`
+- **What changed:** `create_df_as_csv_string` returns the CSV as bytes (`BytesIO`), or `None` if the table isn't in the
+  cache; both apps' `/urlToDownload` routes return 404 ("run the calculation first") for a missing table and 400 if no
+  table is named, and replace `/` in the download filename.
+- **Why:** the routes passed a text `StringIO` to `flask.send_file`; gunicorn can only stream bytes, so the response
+  failed part-way (gunicorn logged `TypeError: '...' is not a byte`) and the browser received an **empty file**. When
+  the requested table wasn't cached, `strIO.write(None)` raised `TypeError` and the user got a **500** error page. Cache
+  keys can contain `/` (eg. `bar_..._by/sum/broker_id`), which isn't valid in a filename.
+- **How tested:** on the Compliance page after a calculation, both "Download CSV" links return 200 `text/csv` with the
+  table's rows (before: an empty body, and a 500 for the broker table); a request for a table that doesn't exist
+  returns 404 (before: 500).
