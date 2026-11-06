@@ -841,3 +841,15 @@ Calculation-affecting fixes are not in this section; they are held for a separat
 - **How tested:** on the Compliance page after a calculation, both "Download CSV" links return 200 `text/csv` with the
   table's rows (before: an empty body, and a 500 for the broker table); a request for a table that doesn't exist
   returns 404 (before: 500).
+
+### Compliance page: show the "Totals by Broker" table
+
+- **File:** `tcapygen/layoutgen.py`
+- **What changed:** the Compliance page looks up the broker summary as
+  `bar_trade_df_executed_notional_in_reporting_currency_by/sum/broker_id` (2 places) instead of
+  `..._by_broker_id`.
+- **Why:** the results form stores bar tables under `<metric>_by/<aggregation>/<field>` (the other pages' keys already
+  use this format), so the old key never matched and the table was always empty (and its CSV link failed).
+- **How tested:** a compliance calculation produces the key `bar_trade_df_executed_notional_in_reporting_currency_by/sum/broker_id`
+  (6 brokers); on the Compliance page the "Totals by Broker" table now shows all 6 brokers' executed notional and its
+  CSV downloads.
