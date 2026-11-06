@@ -313,3 +313,110 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   uploading 2.05 MB and 2.14 MB trade CSVs to tcapyboard (with this setting) reached tcapy, which read the files and
   validated them. (Those files were the sample trades repeated to exceed 1 MB, so tcapy then rejected their duplicated
   timestamps; a normal upload of the unrepeated sample computes all charts.)
+
+### docker-compose.yml: pin MySQL to 8.0
+
+- **File:** `docker-compose.yml`
+- **What changed:** `image: mysql` -> `image: mysql:8.0`.
+- **Why:** the untagged `mysql` image means `mysql:latest`, which is now MySQL 26.10. That version removed the
+  `--default-authentication-plugin` option this service starts with, so the container refuses to start:
+  `[ERROR] [MY-000067] [Server] unknown variable 'default-authentication-plugin=mysql_native_password'` followed by
+  `Aborting`. tcapy then has no trade database. MySQL 8.0 is the newest series that still accepts the option, and it
+  works with tcapy's `mysql-connector-python` 8.0.23.
+- **How tested:** started `mysql:latest` (26.10.0) and `mysql:8.0` (8.0.46) with the same command: 26.10 aborts as
+  above, 8.0 reaches "ready for connections". The stack has run on `mysql:8.0` throughout: trades and orders load into
+  `trade_database`, and the web UI and test suite read them.
+
+### docker-compose.yml: pin MongoDB to 4.4
+
+- **File:** `docker-compose.yml`
+- **What changed:** `image: mongo:latest` -> `image: mongo:4.4`.
+- **Why:** `latest` changes underneath you (it is MongoDB 9.0 at the time of writing), and MongoDB data directories
+  can't be opened by a much newer or older major version, so an unpinned image can stop an existing install from
+  starting after a pull. 4.4 is the version the whole stack was verified on: market data loading, the web UI on every
+  page, and the test suite's Arctic tests. It matches the pymongo 3.12 / arctic 1.79 generation tcapy uses.
+- **Note:** MongoDB 4.4 reached end of life in February 2024 (no further security fixes). MongoDB 9.0 also passed an
+  Arctic write/read check in all three storage formats, so moving to a supported version later is possible; it needs
+  the market data reloaded, because a 4.4 data directory can't be opened by 8.0+ directly.
+- **How tested:** the stack has run on `mongo:4.4` throughout: 2,100,186 EURUSD ticks loaded and read back, all web
+  pages calculate from it, and the full test suite's Arctic tests pass.
+
+### docker-compose.yml: pin nginx, Redis, memcached and Adminer
+
+- **File:** `docker-compose.yml`
+- **What changed:** `nginx:latest` -> `nginx:1.27`, `redis:alpine` -> `redis:7.4-alpine`, `memcached` ->
+  `memcached:1.6`, `adminer` -> `adminer:4`.
+- **Why:** untagged or `latest` images change whenever a new release is published, so the same compose file can start
+  different software from one day to the next (exactly what broke the MySQL service). These are the series the stack
+  was verified with. Each tag still receives that series' patch releases.
+- **How tested:** the running stack uses exactly these images (nginx 1.27.5, Redis 7.4.12, memcached 1.6.45,
+  Adminer 4): the web UI on every page, Redis caching of results, Celery tasks via Redis, the Celery result backend in
+  memcached, and the Adminer page (HTTP 200) all work on them. The nginx config was validated with `nginx -t` on
+  `nginx:1.27`.
+
+### docker-compose.yml: remove the obsolete `version` key
+
+- **File:** `docker-compose.yml`
+- **What changed:** removed the first line, `version: '3.6'`.
+- **Why:** Compose v2 ignores this key and prints a warning on every `docker compose` command:
+  "the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion".
+  Only the old Python Compose v1 (end-of-life since July 2023) used it; with it gone, v1 would no longer read this file.
+  Docker Desktop's `docker-compose` command (used by the `Makefile`) is Compose v2, so `make` is unaffected.
+- **How tested:** `docker compose config` on the file without the key reports no warning and resolves all ten services
+  (nginx, jupyter, gunicorn_tcapy, gunicorn_tcapyboard, celery, redis, memcached, mongo, mysql, adminer). The running
+  stack has used the file without this key.
+
+### docker-compose.yml: remove the trailing `&` from the gunicorn commands (tidy-up)
+
+- **File:** `docker-compose.yml`
+- **What changed:** both gunicorn `command:` strings ended in `... tcapy_wsgi:application & ` (and the same for
+  tcapyboard); the trailing `& ` is removed.
+- **Why:** no behaviour change - this is to stop the file being misleading. `&` means "run in the background" in a
+  shell. Compose doesn't run commands through a shell and drops it, so it has no effect today. But if the command were
+  ever run through a shell (eg. moved into a script or `sh -c`), gunicorn would be sent to the background, the
+  container's main process would exit, and the container would stop immediately.
+- **How tested:** `docker compose config` shows the resolved commands end at `tcapy_wsgi:application` /
+  `tcapyboard_wsgi:application` both with and without the `&` (Compose already dropped it); gunicorn only reads the
+  first positional argument (`self.app_uri = args[0]`). The running stack uses the commands without it.
+
+### docker-compose.yml: separate gunicorn log files for tcapyboard
+
+- **File:** `docker-compose.yml`
+- **What changed:** the `gunicorn_tcapyboard` service now writes `log/gunicorn_tcapyboard_access.log` and
+  `log/gunicorn_tcapyboard_error.log` instead of the same `gunicorn_tcapy_*.log` files as the main app.
+- **Why:** both gunicorn services mount the same `./log` folder and were configured with the same two file names, so
+  the main app's and tcapyboard's requests and errors were interleaved in one pair of files, with nothing on each line
+  saying which app wrote it. That makes a failing request or startup error hard to attribute.
+- **How tested:** in the running stack's `log/` folder, `gunicorn_tcapy_error.log` contains startup lines from both
+  apps (8 x "Listening at: http://0.0.0.0:8090" and 4 x "...:8092", written before the split), while since the split
+  `gunicorn_tcapyboard_error.log` contains only tcapyboard's (8092) and `gunicorn_tcapyboard_access.log` only
+  tcapyboard's requests.
+
+### docker-compose.yml: drop nginx's unused port 80
+
+- **File:** `docker-compose.yml`
+- **What changed:** removed `- 80:80` from the nginx service's `ports`.
+- **Why:** nothing listens on port 80. The mounted `tcapy_nginx_gunicorn_docker.conf` replaces nginx's default site and
+  only defines `listen 9500`, so the published port 80 accepted connections and immediately reset them. It also
+  occupied port 80 on the host for no benefit (and can clash with anything else using it). Both apps are served on
+  9500 (`/tcapy/`, `/tcapyboard/`).
+- **How tested:** ran `nginx:1.27` with this config and both ports published: port 80 gives a connection reset
+  (curl exit 56, no HTTP response) and the container's only nginx listening socket is 9500, while 9500 serves
+  `/tcapy/` (HTTP 200).
+
+### docker-compose.yml: publish every port on 127.0.0.1 only
+
+- **File:** `docker-compose.yml`
+- **What changed:** each of the nine published ports is now bound to `127.0.0.1` (eg. `- 6379:6379` ->
+  `- 127.0.0.1:6379:6379`), with a comment at the top of the file explaining how to expose one deliberately.
+- **Why:** `- 6379:6379` publishes on all network interfaces, so the services could be reachable from other machines
+  on the network (subject to the host's firewall). Several have no authentication at all: Redis (6379; results cache
+  and Celery queue - anyone reaching it can read or flush it), memcached (11211; Celery results), and the web apps
+  (9500 via nginx, 8090/8092 directly; tcapy has no login). The others are protected only by the passwords/token in
+  `.tcapy.env` (MySQL 3306, MongoDB 27017, Adminer 8080, Jupyter 8888). Binding to 127.0.0.1 keeps everything usable
+  from this computer while closing it to the network. The containers still reach each other over Docker's internal
+  network, which this doesn't affect.
+- **How tested:** the running stack has used exactly these bindings (`docker compose ps` shows `127.0.0.1:<port>`
+  for all nine): the web UI at `http://localhost:9500/tcapy/` and `/tcapyboard/`, Jupyter at `http://localhost:8888`,
+  Adminer at `http://localhost:8080`, and every container-to-container connection (gunicorn/celery to MySQL, MongoDB,
+  Redis, memcached; nginx to gunicorn) work. Access from another machine was not tested (no second machine available).
