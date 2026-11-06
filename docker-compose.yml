@@ -66,8 +66,8 @@ services:
       dockerfile: Dockerfile
       target: builder
     command: "gunicorn --bind 0.0.0.0:8092 --workers 4 --threads 6 --preload --chdir /tcapy/tcapy/conf \
-        --access-logfile /tcapy/log/gunicorn_tcapy_access.log \
-        --error-logfile /tcapy/log/gunicorn_tcapy_error.log tcapyboard_wsgi:application"
+        --access-logfile /tcapy/log/gunicorn_tcapyboard_access.log \
+        --error-logfile /tcapy/log/gunicorn_tcapyboard_error.log tcapyboard_wsgi:application"
     volumes:
       - ./log:/tcapy/log
       - /tmp/csv:/tmp/csv

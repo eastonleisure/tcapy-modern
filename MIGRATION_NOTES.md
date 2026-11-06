@@ -378,3 +378,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** `docker compose config` shows the resolved commands end at `tcapy_wsgi:application` /
   `tcapyboard_wsgi:application` both with and without the `&` (Compose already dropped it); gunicorn only reads the
   first positional argument (`self.app_uri = args[0]`). The running stack uses the commands without it.
+
+### docker-compose.yml: separate gunicorn log files for tcapyboard
+
+- **File:** `docker-compose.yml`
+- **What changed:** the `gunicorn_tcapyboard` service now writes `log/gunicorn_tcapyboard_access.log` and
+  `log/gunicorn_tcapyboard_error.log` instead of the same `gunicorn_tcapy_*.log` files as the main app.
+- **Why:** both gunicorn services mount the same `./log` folder and were configured with the same two file names, so
+  the main app's and tcapyboard's requests and errors were interleaved in one pair of files, with nothing on each line
+  saying which app wrote it. That makes a failing request or startup error hard to attribute.
+- **How tested:** in the running stack's `log/` folder, `gunicorn_tcapy_error.log` contains startup lines from both
+  apps (8 x "Listening at: http://0.0.0.0:8090" and 4 x "...:8092", written before the split), while since the split
+  `gunicorn_tcapyboard_error.log` contains only tcapyboard's (8092) and `gunicorn_tcapyboard_access.log` only
+  tcapyboard's requests.
