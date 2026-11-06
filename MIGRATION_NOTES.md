@@ -931,3 +931,13 @@ Calculation-affecting fixes are not in this section; they are held for a separat
 - **Why:** the same class declares `fill_computation_request_kwargs` again further down (as an abstract method), and
   the later definition replaces the earlier one, so the first was never used (pyflakes: "redefinition of unused").
 - **How tested:** no behaviour change; the web apps start and calculate as before.
+
+### Web UI: offer dates back 10 years instead of 4
+
+- **File:** `tcapygen/constantsgen.py`
+- **What changed:** `gui_lookback_window = 4*365` -> `10*365`.
+- **Why:** the date dropdowns only list dates within this window of today. With 4 years, the bundled sample data
+  (April-June 2017) couldn't be selected at all, so the web UI couldn't be tried with it. This is a configuration
+  setting; adjust it to your data.
+- **How tested:** the Start/Finish Date dropdowns offer 2017 dates, and calculations for May 2017 run on the Aggregated
+  and Compliance pages.
