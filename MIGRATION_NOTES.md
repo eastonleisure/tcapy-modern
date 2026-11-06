@@ -731,3 +731,13 @@ PR description.
   GitHub no longer supports. `if: always()` uploads the test reports (pytest HTML report and coverage) when tests fail,
   which is when they're needed.
 - **How tested:** see the last entry in this section.
+
+### Create test credentials in CI
+
+- **File:** `.github/workflows/main.yml`
+- **What changed:** a step before `make test` writes `.tcapy.env` with a random password for MySQL and MongoDB.
+- **Why:** every service in `docker-compose.test.yml` reads `env_file: .tcapy.env`, which is git-ignored, so on a fresh
+  checkout Compose stops with "env file .../.tcapy.env not found". The test databases only exist for the length of the
+  run and publish no ports, so throwaway credentials are enough; no repository secrets are needed.
+- **How tested:** the step's script, extracted from the workflow file, run in a clean checkout produces a `.tcapy.env`
+  the test stack starts with (see the last entry).

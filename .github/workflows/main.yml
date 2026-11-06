@@ -21,6 +21,20 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
+      # The test stack reads credentials from .tcapy.env, which is git-ignored. Its databases only exist inside
+      # this run (no ports are published), so generate throwaway credentials.
+      - name: Create test credentials
+        run: |
+          pw=$(openssl rand -hex 16)
+          cat > .tcapy.env <<EOF
+          MYSQL_USER=tcapyuser
+          MYSQL_PASSWORD=$pw
+          MYSQL_ROOT_PASSWORD=$pw
+          MYSQL_DATABASE=trade_database
+          MONGO_INITDB_ROOT_USERNAME=admin_root
+          MONGO_INITDB_ROOT_PASSWORD=$pw
+          EOF
+
       # Runs a single command using the runners shell
       #- name: test
       - run: make test
