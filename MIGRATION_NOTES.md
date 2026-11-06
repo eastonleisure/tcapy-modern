@@ -229,3 +229,18 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** installed each release into a copy of the working image and imported `chartpy.dashboard`,
   `tcapy_wsgi` and `tcapyboard_wsgi`: all fail on 0.1.8 and all work on 0.1.9, 0.1.10, 0.1.11 and 0.1.12. 0.1.10 is
   pinned because the full test suite and every web page (charts included) were run with it.
+
+### Recompile fastparquet against the installed numpy
+
+- **File:** `Dockerfile`
+- **What changed:** after the main `pip install`, reinstall `fastparquet==0.4.1` from source with
+  `--no-build-isolation`, so it compiles against the numpy already installed in the image.
+- **Why:** fastparquet 0.4.1 has no wheel here, so pip compiles it. pip builds in an isolated environment and fetches
+  the newest numpy for the build (1.21), while the image runs numpy 1.19.5 (pinned above). The compiled module then
+  doesn't match the runtime numpy, and fastparquet fails to import:
+  `ValueError: numpy.ndarray size changed, may indicate binary incompatibility. Expected 88 from C header, got 80`.
+  tcapy reads Parquet files through it, so loading market data from Parquet (eg. the bundled sample data) failed with
+  "No valid data".
+- **How tested:** without the rebuild, `import fastparquet` fails as above and reading
+  `test/resources/small_test_market_df.parquet` returns nothing. After the rebuild, fastparquet imports and the file
+  reads in full (4,369,664 rows); the sample market data then loads into Arctic (2,100,186 EURUSD ticks).

@@ -25,6 +25,10 @@ RUN sed -i -e 's|deb.debian.org|archive.debian.org|g' -e 's|security.debian.org|
     # && \
     #apt-get purge -y --auto-remove $buildDeps
 
+# fastparquet 0.4.1 is built from source; pip's isolated build compiles it against a newer numpy than the
+# pinned runtime one (ndarray size mismatch), so rebuild it against the installed numpy
+RUN pip install --no-cache-dir --no-build-isolation --no-binary fastparquet --force-reinstall --no-deps fastparquet==0.4.1
+
 # Copy to /
 COPY ./tcapy /tcapy/tcapy
 COPY ./tcapygen /tcapy/tcapygen
