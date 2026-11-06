@@ -420,3 +420,34 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   for all nine): the web UI at `http://localhost:9500/tcapy/` and `/tcapyboard/`, Jupyter at `http://localhost:8888`,
   Adminer at `http://localhost:8080`, and every container-to-container connection (gunicorn/celery to MySQL, MongoDB,
   Redis, memcached; nginx to gunicorn) work. Access from another machine was not tested (no second machine available).
+
+---
+
+## MySQL
+
+### Use MySQL 8's default authentication instead of mysql_native_password
+
+- **File:** `docker-compose.yml`
+- **What changed:** removed `command: --default-authentication-plugin=mysql_native_password` from the mysql service, so
+  new MySQL accounts use MySQL 8.0's default `caching_sha2_password`.
+- **Why:** both the option and the `mysql_native_password` plugin are deprecated in MySQL 8.0 (MySQL logs
+  "'default_authentication_plugin' is deprecated" and "'mysql_native_password' is deprecated and will be removed in a
+  future release" on every start), and the option no longer exists in newer MySQL - it's why the image had to be
+  pinned to 8.0. It was originally needed for older MySQL clients; tcapy's `mysql-connector-python` 8.0.23 supports
+  `caching_sha2_password`.
+- **How tested:** started two fresh MySQL 8.0 containers, one with the option and one without, and ran tcapy's own trade
+  write and read (`DatabaseSourceMySQL.convert_csv_to_table` + `fetch_trade_order_data`) against each: both succeed
+  (52 EURUSD trades read back). Without the option, root and `tcapyuser` are created with `caching_sha2_password` and
+  neither deprecation warning appears. (The only remaining "deprecated" line, `--skip-host-cache`, comes from the
+  official image's own entrypoint.)
+- **Existing installs:** this only affects accounts created from now on. Accounts already in an existing data
+  directory keep `mysql_native_password` and continue to work on MySQL 8.0. To move them over (keeping their
+  passwords), run inside the mysql container:
+  ```
+  docker compose exec mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "
+    ALTER USER \"root\"@\"%\" IDENTIFIED WITH caching_sha2_password BY \"$MYSQL_ROOT_PASSWORD\";
+    ALTER USER \"root\"@\"localhost\" IDENTIFIED WITH caching_sha2_password BY \"$MYSQL_ROOT_PASSWORD\";
+    ALTER USER \"$MYSQL_USER\"@\"%\" IDENTIFIED WITH caching_sha2_password BY \"$MYSQL_PASSWORD\";"'
+  ```
+  This was done on the development stack, which has run on `caching_sha2_password` since (web UI, notebooks and test
+  suite all read/write MySQL).

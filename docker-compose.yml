@@ -130,9 +130,9 @@ services:
       - /data/db_mongodb:/data/db
       - ./log:/var/log/mongodb
 
+  # MySQL 8.0's default caching_sha2_password authentication; mysql-connector-python 8.0.23 supports it
   mysql:
     image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password
     volumes:
       - /data/db_mysql:/var/lib/mysql
     env_file: .tcapy.env
