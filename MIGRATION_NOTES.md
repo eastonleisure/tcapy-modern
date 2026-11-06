@@ -715,3 +715,19 @@ fixes make a refused or failed download fail quickly and cleanly instead.
 With the patched image, `test/test_tcapy/test_data_vendor_feed.py` still fails (4 tests), because Dukascopy refuses the
 downloads, but now quickly and with a clear cause instead of crashing or retrying indefinitely - see the result in the
 PR description.
+
+---
+
+## CI (GitHub Actions)
+
+### Update the workflow's actions
+
+- **File:** `.github/workflows/main.yml`
+- **What changed:** `actions/checkout@v2` -> `@v4` and `actions/upload-artifact@v2` -> `@v4`; the artifact upload now
+  runs with `if: always()`.
+- **Why:** GitHub retired v1/v2 of the artifact actions, so every run failed in the "Set up job" step, before checking
+  out the code: "This request has been automatically failed because it uses a deprecated version of
+  `actions/upload-artifact: v2`". That's the red "CI / test" check on every PR. `checkout@v2` runs on a Node.js version
+  GitHub no longer supports. `if: always()` uploads the test reports (pytest HTML report and coverage) when tests fail,
+  which is when they're needed.
+- **How tested:** see the last entry in this section.
