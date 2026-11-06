@@ -768,3 +768,31 @@ PR description.
 - **Why:** `docker-compose.local.test.yml` doesn't exist in the repo (it isn't in the original either), so the target
   always failed. `make test` runs the test stack locally as well as in CI.
 - **How tested:** `make test_local` previously failed with "no such file or directory" for the compose file.
+
+### Pass `RUN_PART` into the test container
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** the `sut` service's `environment` now includes `RUN_PART`, passing the value from the shell running
+  Compose into the container.
+- **Why:** the workflow sets `RUN_PART: 1` so CI skips the multithreading tests ("which run out of memory on GitHub"),
+  and the test image's command checks `RUN_PART` - but the variable was only set on the runner, never passed into the
+  container, so the full suite (including the multithreading tests) always ran.
+- **How tested:** see below.
+
+### CI checks after these changes
+
+Simulated the CI job locally on this branch: wrote `.tcapy.env` with the workflow's own step script, then ran
+`RUN_PART=1 make test` (see the PR description for the result). The workflow itself runs on GitHub when the PR is
+opened.
+
+### Not changed: the Release workflow (`.github/workflows/pypi.yml`) - left as is, on purpose
+
+- **What it does:** on any pushed tag matching `[0-9]+.[0-9]+.[0-9]` (eg. `0.1.3`), it runs `make test` and then
+  publishes a package called `tcapy` to PyPI with `mariamrf/py-package-publish-action@v1.0.0`, using the repository
+  secrets `TWINE_USERNAME` / `TWINE_PASSWORD`.
+- **Why it was left:** it only runs on tags, so it doesn't affect pushes or pull requests.
+- **What to expect if a version tag is pushed:** this repository has no PyPI credentials (they belonged to the original
+  project), so the publish step would fail. It also still uses `actions/checkout@master` and an unmaintained publish
+  action, and its `make test` step would need the same `.tcapy.env` credentials step as the CI workflow. Before
+  creating version tags, decide whether to remove this workflow, or update it (and set up credentials) to publish
+  under a name you own.
