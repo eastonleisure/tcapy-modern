@@ -603,3 +603,11 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   with its own project name: `docker compose -p tcapy-test -f docker-compose.test.yml ...`.
 - **How tested:** with the main stack running, starting the test stack's redis/memcached failed with the error above;
   without the published ports the whole test stack starts alongside it and the test suite runs.
+
+### Remove the obsolete `version` key from the test stack (and document how to run it)
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** removed `version: '3.6'` (as in `docker-compose.yml`) and added a header comment with the command
+  to run the suite.
+- **Why:** Compose v2 ignores the key and warns about it on every command.
+- **How tested:** `docker compose -f docker-compose.test.yml config` reports no warning and resolves all services.
