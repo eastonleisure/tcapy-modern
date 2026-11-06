@@ -326,3 +326,17 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** started `mysql:latest` (26.10.0) and `mysql:8.0` (8.0.46) with the same command: 26.10 aborts as
   above, 8.0 reaches "ready for connections". The stack has run on `mysql:8.0` throughout: trades and orders load into
   `trade_database`, and the web UI and test suite read them.
+
+### docker-compose.yml: pin MongoDB to 4.4
+
+- **File:** `docker-compose.yml`
+- **What changed:** `image: mongo:latest` -> `image: mongo:4.4`.
+- **Why:** `latest` changes underneath you (it is MongoDB 9.0 at the time of writing), and MongoDB data directories
+  can't be opened by a much newer or older major version, so an unpinned image can stop an existing install from
+  starting after a pull. 4.4 is the version the whole stack was verified on: market data loading, the web UI on every
+  page, and the test suite's Arctic tests. It matches the pymongo 3.12 / arctic 1.79 generation tcapy uses.
+- **Note:** MongoDB 4.4 reached end of life in February 2024 (no further security fixes). MongoDB 9.0 also passed an
+  Arctic write/read check in all three storage formats, so moving to a supported version later is possible; it needs
+  the market data reloaded, because a 4.4 data directory can't be opened by 8.0+ directly.
+- **How tested:** the stack has run on `mongo:4.4` throughout: 2,100,186 EURUSD ticks loaded and read back, all web
+  pages calculate from it, and the full test suite's Arctic tests pass.
