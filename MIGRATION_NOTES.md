@@ -892,3 +892,13 @@ Calculation-affecting fixes are not in this section; they are held for a separat
 - **Why:** with a `'gzip'` value that isn't the same string object (eg. read from configuration), downloaded market
   data dumps would silently be written uncompressed.
 - **How tested:** compiles without the warning.
+
+### Multi-period downloads: skip periods with no data
+
+- **File:** `tcapy/data/databasepopulator.py`
+- **What changed:** in `download_to_csv`, a period whose download returned `None` is skipped instead of appended.
+- **Why:** when one period (eg. a month) had no data, it was stored as `None` and the next period then called
+  `None.append(...)`, crashing the whole download with `AttributeError: 'NoneType' object has no attribute 'append'`
+  (seen in `test_write_csv_from_data_vendor`).
+- **How tested:** `test_write_csv_from_data_vendor` no longer fails with that error (it still fails, because Dukascopy
+  refuses the downloads, so there is no data at all).
