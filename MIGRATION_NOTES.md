@@ -492,3 +492,15 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **Access token:** Jupyter reads `JUPYTER_TOKEN` (eg. put `JUPYTER_TOKEN=<random string>` in `.tcapy.env`). Without
   it, Jupyter generates a token and prints the login URL in `docker compose logs jupyter`.
 - **How tested:** see the next entry (tested together with the compose service).
+
+### docker-compose.yml: build the jupyter service from the new stage
+
+- **File:** `docker-compose.yml`
+- **What changed:** the jupyter service's build now uses `dockerfile: Dockerfile`, `target: jupyter` instead of
+  `dockerfile: binder/Dockerfile`, `target: builder`.
+- **Why:** `binder/Dockerfile` can't be built (its base image no longer exists), so `docker compose up` / `build`
+  failed for this service. `binder/Dockerfile` itself is left unchanged; it is no longer used by docker-compose.
+- **How tested:** `docker compose build jupyter` builds; the container starts Jupyter Notebook 6.4.12 and serves the
+  notebook list (`/tree`, HTTP 200 with the token; the login page without it). In a notebook kernel (run with
+  `jupyter nbconvert --execute`), tcapy, pandas and plotly import, the sample market data reads from
+  `../test/resources/`, and the running MongoDB and MySQL are reachable (market ticks and trades read back).

@@ -19,8 +19,8 @@ services:
   jupyter:
     build:
       context: .
-      dockerfile: binder/Dockerfile
-      target: builder
+      dockerfile: Dockerfile
+      target: jupyter
     environment:
       - APP_ENV=docker
     env_file: .tcapy.env
