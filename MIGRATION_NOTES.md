@@ -638,3 +638,24 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   3.1.6" and `import tcapy_wsgi` failed as above. With this change the test image keeps Jinja2 2.11.3 and both web
   modules import. Sphinx 4.5.0 runs, but the Makefile's `doc` target still has nothing to build: the repo's `source/`
   folder only contains a `.gitkeep` and no Sphinx `conf.py` (true in the original repo too).
+
+### Lock the test image's extra packages
+
+- **File:** `requirements.lock`
+- **What changed:** appended the 19 packages that only the test image installs (pytest-html, Sphinx, mongomock,
+  httpretty, requests-mock and their dependencies), under a comment line, with their exact versions.
+- **Why:** the test stage installs with `-c requirements.lock`, but these packages weren't in the lock (it was generated
+  from the main image), so they still floated to whatever was newest at build time. Locking them makes the test image
+  reproducible like the main one. The main image is unaffected: constraints only apply to packages that are installed.
+- **How tested:** rebuilt the test image with the extended lock and compared `pip freeze` with the lock: identical.
+
+### Test suite result with the test stack fixed
+
+Full suite (`docker compose -p tcapy-test -f docker-compose.test.yml up --build --exit-code-from sut`, all tests
+including multithreading), on this branch plus the numba fix, run alongside the main stack: **40 passed, 6 failed**
+(the original test stack couldn't start at all). The 6 failures:
+- `test_data_vendor_feed.py` (4 tests): Dukascopy currently refuses findatapy's download requests (HTTP 403).
+- `test_overlapping_data_caching.py::test_overlapping_full_detailed_tca_calculation`: the test reads the test-harness
+  databases without requesting the fixture that fills them (fixed separately in the bug fixes).
+- `test_results_agg.py::test_histogram_generator`: a tcapy bug in the histogram min/max, held for a separate decision
+  (`TCA_QUESTIONS.md`).
