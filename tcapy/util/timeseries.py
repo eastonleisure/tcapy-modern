@@ -29,6 +29,8 @@ constants = Constants()
 
 from tcapy.util.customexceptions import *
 
+from functools import reduce
+
 class TimeSeriesOps(object):
     """TimeSeriesOps provides generalised time series operations on DataFrame objects, which are used throughout the
     library. These include filtering a DataFrame by start/finish dates, joining DataFrames, doing VLOOKUP style operations,

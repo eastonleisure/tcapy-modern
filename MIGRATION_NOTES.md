@@ -902,3 +902,13 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   (seen in `test_write_csv_from_data_vendor`).
 - **How tested:** `test_write_csv_from_data_vendor` no longer fails with that error (it still fails, because Dukascopy
   refuses the downloads, so there is no data at all).
+
+### Import `reduce` in timeseries.py
+
+- **File:** `tcapy/util/timeseries.py`
+- **What changed:** added `from functools import reduce`.
+- **Why:** `TimeSeriesOps.merge()` calls `reduce(...)`, which was a builtin in Python 2 but must be imported in Python 3,
+  so calling it raised `NameError: name 'reduce' is not defined`. (Only the import is changed here; this file's
+  `is`-comparisons are held in `TCA_QUESTIONS.md`.)
+- **How tested:** a runtime check that imports every tcapy module and verifies every name pyflakes couldn't resolve
+  through `import *` found `reduce` missing before and resolved after; `TimeSeriesOps().merge([...])` works.
