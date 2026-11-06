@@ -44,7 +44,8 @@ for css in stylesheets:
     # app.css.append_css({"external_url": static_css_route + css})
     stylesheets_path.append(static_css_route + css)
 
-app = dash.Dash(name='tcapyboard', server=server, suppress_callback_exceptions=True, serve_locally=True, external_stylesheets=stylesheets_path)
+app = dash.Dash(name='tcapyboard', server=server, assets_folder=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets'), # Dash would otherwise look in the package root, not tcapy/vis/assets (logo 404)
+                suppress_callback_exceptions=True, serve_locally=True, external_stylesheets=stylesheets_path)
 app.title = 'tcapyboard'
 app.server.secret_key = constants.secret_key
 
@@ -152,11 +153,17 @@ def serve_csv():
 
     dataFrame = flask.request.args.get('dataFrame')
 
-    strIO = display_listeners.create_df_as_csv_string(dataFrame)
+    if dataFrame is None:
+        flask.abort(400, 'No dataFrame specified')
 
-    return flask.send_file(strIO,
+    csv_bytes = display_listeners.create_df_as_csv_string(dataFrame)
+
+    if csv_bytes is None:
+        flask.abort(404, 'No results for ' + dataFrame + ' - run the calculation first')
+
+    return flask.send_file(csv_bytes,
                      mimetype='text/csv',
-                     attachment_filename=dataFrame.replace('-', '_') + '.csv',
+                     attachment_filename=dataFrame.replace('-', '_').replace('/', '_') + '.csv',
                      as_attachment=True)
 
 @app.server.route('/favicon.ico')

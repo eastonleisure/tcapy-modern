@@ -23,8 +23,7 @@ from tcapy.analysis.tcaengine import TCAEngineImpl
 from tcapy.analysis.tcarequest import TCARequest
 from tcapy.util.fxconv import FXConv
 from tcapy.util.loggermanager import LoggerManager
-from tcapy.analysis.algos.metric import *
-
+from tcapy.util.utilfunc import UtilFunc
 from tcapy.analysis.algos.metric import *
 from tcapy.analysis.algos.resultsform import *
 

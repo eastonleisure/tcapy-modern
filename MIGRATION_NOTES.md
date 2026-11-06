@@ -796,3 +796,158 @@ opened.
   action, and its `make test` step would need the same `.tcapy.env` credentials step as the CI workflow. Before
   creating version tags, decide whether to remove this workflow, or update it (and set up credentials) to publish
   under a name you own.
+
+---
+
+## Bug fixes (tcapy code)
+
+Calculation-affecting fixes are not in this section; they are held for a separate decision in `TCA_QUESTIONS.md`.
+
+### Web apps: serve the logo and other assets from `tcapy/vis/assets`
+
+- **Files:** `tcapy/vis/app.py`, `tcapy/vis/app_board.py`
+- **What changed:** both `dash.Dash(...)` calls pass `assets_folder=<directory of the app file>/assets`.
+- **Why:** Dash looks for an `assets/` folder next to the module named in `name=`. For `name='tcapy'` that is the
+  `tcapy` package folder (`tcapy/assets`, which doesn't exist) and for `name='tcapyboard'` the working directory
+  (`tcapy/conf/assets`). The assets are in `tcapy/vis/assets`, so the header logo on every page returned 404, and the
+  favicon and `tabs.css` (the tab styles) were never served.
+- **How tested:** before, `/tcapy/assets/logo.png` and `/tcapyboard/assets/logo.png` returned 404; after, both return
+  200 (image/png) and the logo shows on every page, the page's declared favicon loads, and `tabs.css` is served.
+
+### Main web app: remove the stylesheet link that never loaded
+
+- **File:** `tcapy/vis/app.py`
+- **What changed:** `stylesheets = ['tcapy.css', dbc.themes.BOOTSTRAP]` -> `stylesheets = ['tcapy.css']`, with a comment
+  explaining why.
+- **Why:** every entry gets the local `/static/` prefix, so the Bootstrap CDN URL became
+  `/tcapy/static/https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css` and returned 404 on every
+  page load - Bootstrap has never actually been applied. No dash-bootstrap components are used. Loading it correctly
+  was tried and breaks the layout: Bootstrap sizes text relative to the root font size, which `tcapy.css` sets to 62.5%,
+  so body text became 10px and the page title 20px (normally 15px and 36px). The page renders exactly as before; only
+  the failing request is gone.
+- **How tested:** before, that URL was the only failing request on the page (404); after, no request fails, and the page
+  layout (fonts, control positions) is unchanged.
+
+### Web apps: make the "Download CSV" links work
+
+- **Files:** `tcapy/vis/displaylisteners.py`, `tcapy/vis/app.py`, `tcapy/vis/app_board.py`
+- **What changed:** `create_df_as_csv_string` returns the CSV as bytes (`BytesIO`), or `None` if the table isn't in the
+  cache; both apps' `/urlToDownload` routes return 404 ("run the calculation first") for a missing table and 400 if no
+  table is named, and replace `/` in the download filename.
+- **Why:** the routes passed a text `StringIO` to `flask.send_file`; gunicorn can only stream bytes, so the response
+  failed part-way (gunicorn logged `TypeError: '...' is not a byte`) and the browser received an **empty file**. When
+  the requested table wasn't cached, `strIO.write(None)` raised `TypeError` and the user got a **500** error page. Cache
+  keys can contain `/` (eg. `bar_..._by/sum/broker_id`), which isn't valid in a filename.
+- **How tested:** on the Compliance page after a calculation, both "Download CSV" links return 200 `text/csv` with the
+  table's rows (before: an empty body, and a 500 for the broker table); a request for a table that doesn't exist
+  returns 404 (before: 500).
+
+### Compliance page: show the "Totals by Broker" table
+
+- **File:** `tcapygen/layoutgen.py`
+- **What changed:** the Compliance page looks up the broker summary as
+  `bar_trade_df_executed_notional_in_reporting_currency_by/sum/broker_id` (2 places) instead of
+  `..._by_broker_id`.
+- **Why:** the results form stores bar tables under `<metric>_by/<aggregation>/<field>` (the other pages' keys already
+  use this format), so the old key never matched and the table was always empty (and its CSV link failed).
+- **How tested:** a compliance calculation produces the key `bar_trade_df_executed_notional_in_reporting_currency_by/sum/broker_id`
+  (6 brokers); on the Compliance page the "Totals by Broker" table now shows all 6 brokers' executed notional and its
+  CSV downloads.
+
+### InfluxDB: fix the ticker delete query
+
+- **File:** `tcapy/data/databasesource.py`
+- **What changed:** `engine.query("drop measurement \"%s\"..\"%s\""(table_name, ticker))` ->
+  `... "\"%s\"..\"%s\"" % (table_name, ticker))`.
+- **Why:** the `%` was missing, so Python tried to *call* the string, which always raised
+  `TypeError: 'str' object is not callable` (Python reports it as a SyntaxWarning when compiling). The surrounding
+  `except` turned that into "Didn't delete anything", so replacing a ticker's data in InfluxDB never deleted the old
+  data.
+- **How tested:** the file compiles without the warning. InfluxDB isn't part of this Docker setup, so the query itself
+  was not run against a server.
+
+### Compare strings with `==`, not `is` (chart direction)
+
+- **File:** `tcapy/vis/candlestick.py`
+- **What changed:** `direction is 'increasing'` / `'decreasing'` -> `==`.
+- **Why:** `is` checks whether two strings are the same object, not whether they're equal. It happens to work for
+  string literals (Python reuses them) but not for equal strings built at runtime, eg. from configuration, where the
+  branch is silently skipped. Python 3.8+ warns about it ("SyntaxWarning: 'is' with a literal").
+- **How tested:** the file compiles without the warning; candlestick charts render on the Detailed page. In the current
+  code the values passed are literals, so no behaviour change is visible today.
+
+### Compare strings with `!=`, not `is not` (timeline gap filling)
+
+- **File:** `tcapy/vis/displaylisteners.py`
+- **What changed:** `constants.timeline_fillna is not 'nofill'` -> `!= 'nofill'`.
+- **Why:** same identity-vs-equality problem: a `timeline_fillna` value of `'nofill'` that isn't the same string
+  object (eg. set from configuration) would still be treated as a fill method.
+- **How tested:** compiles without the warning; timeline charts render on the Aggregated page. No visible change with
+  the default setting.
+
+### Compare strings with `==`, not `is` (gzip of CSV dumps)
+
+- **File:** `tcapy/data/databasepopulator.py`
+- **What changed:** `csv_compression is 'gzip'` -> `== 'gzip'`.
+- **Why:** with a `'gzip'` value that isn't the same string object (eg. read from configuration), downloaded market
+  data dumps would silently be written uncompressed.
+- **How tested:** compiles without the warning.
+
+### Multi-period downloads: skip periods with no data
+
+- **File:** `tcapy/data/databasepopulator.py`
+- **What changed:** in `download_to_csv`, a period whose download returned `None` is skipped instead of appended.
+- **Why:** when one period (eg. a month) had no data, it was stored as `None` and the next period then called
+  `None.append(...)`, crashing the whole download with `AttributeError: 'NoneType' object has no attribute 'append'`
+  (seen in `test_write_csv_from_data_vendor`).
+- **How tested:** `test_write_csv_from_data_vendor` no longer fails with that error (it still fails, because Dukascopy
+  refuses the downloads, so there is no data at all).
+
+### Import `reduce` in timeseries.py
+
+- **File:** `tcapy/util/timeseries.py`
+- **What changed:** added `from functools import reduce`.
+- **Why:** `TimeSeriesOps.merge()` calls `reduce(...)`, which was a builtin in Python 2 but must be imported in Python 3,
+  so calling it raised `NameError: name 'reduce' is not defined`. (Only the import is changed here; this file's
+  `is`-comparisons are held in `TCA_QUESTIONS.md`.)
+- **How tested:** a runtime check that imports every tcapy module and verifies every name pyflakes couldn't resolve
+  through `import *` found `reduce` missing before and resolved after; `TimeSeriesOps().merge([...])` works.
+
+### REST API: import `UtilFunc`
+
+- **File:** `tcapy/api/app_api.py`
+- **What changed:** added `from tcapy.util.utilfunc import UtilFunc`, and removed a duplicated
+  `from tcapy.analysis.algos.metric import *`.
+- **Why:** the API converts results with `UtilFunc().convert_dict_of_dataframe_to_json(...)` but never imported it, so
+  every successful TCA request through the REST API ended in `NameError: name 'UtilFunc' is not defined` (caught and
+  returned as "Failed to complete request").
+- **How tested:** the same runtime name check found `UtilFunc` missing before and resolved after. The REST API isn't
+  part of the Docker setup, so it wasn't run as a server.
+
+### Remove a dead duplicate method
+
+- **File:** `tcapy/vis/computationcaller.py`
+- **What changed:** removed an empty `fill_computation_request_kwargs(self, kwargs, fields): pass` early in the class.
+- **Why:** the same class declares `fill_computation_request_kwargs` again further down (as an abstract method), and
+  the later definition replaces the earlier one, so the first was never used (pyflakes: "redefinition of unused").
+- **How tested:** no behaviour change; the web apps start and calculate as before.
+
+### Web UI: offer dates back 10 years instead of 4
+
+- **File:** `tcapygen/constantsgen.py`
+- **What changed:** `gui_lookback_window = 4*365` -> `10*365`.
+- **Why:** the date dropdowns only list dates within this window of today. With 4 years, the bundled sample data
+  (April-June 2017) couldn't be selected at all, so the web UI couldn't be tried with it. This is a configuration
+  setting; adjust it to your data.
+- **How tested:** the Start/Finish Date dropdowns offer 2017 dates, and calculations for May 2017 run on the Aggregated
+  and Compliance pages.
+
+### Test: load the test data before the overlapping-cache test
+
+- **File:** `test/test_tcapy/test_overlapping_data_caching.py`
+- **What changed:** `test_overlapping_full_detailed_tca_calculation` now takes the `fill_market_trade_databases`
+  fixture.
+- **Why:** it reads the test-harness MySQL and Arctic tables, but never asked for the fixture that fills them (every
+  other test that needs that data does), so it only passed if an earlier test happened to leave the data behind. In a
+  clean test stack it failed with `KeyError: 'sparse_market_trade_df'` (no trades found).
+- **How tested:** the full test suite (see the PR) - this test passes.

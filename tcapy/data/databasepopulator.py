@@ -174,7 +174,10 @@ class DatabasePopulator(ABC):
 
             if return_df:
                 for k in df_dict_list.keys():
-                    if k in df_dict.keys():
+                    # A period with no data comes back as None - skip it rather than calling None.append()
+                    if df_dict_list[k] is None:
+                        df_dict.setdefault(k, None)
+                    elif df_dict.get(k) is not None:
                         df_dict[k] = df_dict[k].append(df_dict_list[k])
                     else:
                         df_dict[k] = df_dict_list[k]
@@ -429,7 +432,7 @@ class DatabasePopulator(ABC):
                         key = '_' + self._get_postfix() + "_" + \
                               (str(df.index[0]) + str(df.index[-1])).replace(":", '_').replace(" ", '_')
 
-                        if csv_compression is 'gzip':
+                        if csv_compression == 'gzip':
                             df.to_csv(os.path.join(csv_folder, ticker + key + ".csv.gz"), compression='gzip')
                         else:
                             df.to_csv(os.path.join(csv_folder, ticker +  key + ".csv"))

@@ -30,7 +30,10 @@ if debug_start_flask_server_directly:
 else:
     url_prefix = constants.url_prefix # eg. if hosted on "http://localhost/tcapy" (can also be empty)
 
-stylesheets = ['tcapy.css', dbc.themes.BOOTSTRAP]
+# Local stylesheets only: each entry is served from the /static/ route below. (The Bootstrap theme that was listed
+# here got the /static/ prefix too, so it was never loaded - and no dash-bootstrap components are used. Loading it
+# for real breaks the layout, since Bootstrap's rem sizes clash with tcapy.css's 62.5% root font size.)
+stylesheets = ['tcapy.css']
 
 if url_prefix == '':
     static_css_route = '/static/'
@@ -51,7 +54,8 @@ for css in stylesheets:
     # app.css.append_css({"external_url": static_css_route + css})
     stylesheets_path.append(static_css_route + css)
 
-app = dash.Dash(name='tcapy', server=server, #url_base_pathname=routes_pathname_prefix,
+app = dash.Dash(name='tcapy', server=server, assets_folder=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'assets'), # Dash would otherwise look in the package root, not tcapy/vis/assets (logo 404)
+                #url_base_pathname=routes_pathname_prefix,
                 suppress_callback_exceptions=True, serve_locally=True,
                 external_stylesheets=stylesheets_path,
                 meta_tags=[{"name": "viewport", "content": "width=1000px"}])
@@ -139,11 +143,17 @@ def serve_csv():
 
     dataFrame = flask.request.args.get('dataFrame')
 
-    strIO = display_listeners.create_df_as_csv_string(dataFrame)
+    if dataFrame is None:
+        flask.abort(400, 'No dataFrame specified')
 
-    return flask.send_file(strIO,
+    csv_bytes = display_listeners.create_df_as_csv_string(dataFrame)
+
+    if csv_bytes is None:
+        flask.abort(404, 'No results for ' + dataFrame + ' - run the calculation first')
+
+    return flask.send_file(csv_bytes,
                      mimetype='text/csv',
-                     attachment_filename=dataFrame.replace('-', '_') + '.csv',
+                     attachment_filename=dataFrame.replace('-', '_').replace('/', '_') + '.csv',
                      as_attachment=True)
 
 @app.server.route('/favicon.ico')

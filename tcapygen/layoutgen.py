@@ -311,9 +311,9 @@ class LayoutDashImplGen(LayoutDash):
             # Compliance page
             'compliance_metric_table_trade_order':
                 {'execution-by-anomalous': 'table_trade_df_slippage_by_worst_all',
-                 'summary-by-broker': 'bar_trade_df_executed_notional_in_reporting_currency_by_broker_id'},
+                 'summary-by-broker': 'bar_trade_df_executed_notional_in_reporting_currency_by/sum/broker_id'},
 
             'compliance_download_link_trade_order':
                 {'execution-by-anomalous': 'table_trade_df_slippage_by_worst_all',
-                 'summary-by-broker': 'bar_trade_df_executed_notional_in_reporting_currency_by_broker_id'},
+                 'summary-by-broker': 'bar_trade_df_executed_notional_in_reporting_currency_by/sum/broker_id'},
         }
