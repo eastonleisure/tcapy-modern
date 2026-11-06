@@ -157,3 +157,13 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** with these pins, pystore writes and reads back a test series, `tcapy.data.databasesource` imports, and
   the full test suite and web UI ran on them. With the original pins, pip reports the two conflicts and the pystore write
   fails as above. (Leaving all four unpinned also passed the pystore check, but was not run through the full test suite.)
+
+### Pin thrift to 0.16.0
+
+- **File:** `requirements.txt`
+- **What changed:** added `thrift==0.16.0` (not listed before; `fastparquet` pulls it in unpinned).
+- **Why:** pip picks the newest thrift (0.25.0 at the time of the fix), which is source-only and declares a build
+  requirement of `setuptools>=69`. setuptools 69 needs Python 3.8+, so on Python 3.7 the build stopped with
+  "No matching distribution found for setuptools>=69". thrift 0.16.0 still builds on Python 3.7.
+- **How tested:** the image build failed at thrift as above; with the pin it installs, and fastparquet (which uses it to
+  read Parquet metadata) reads the sample market data file.

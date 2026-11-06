@@ -13,6 +13,7 @@ pyarrow==2.0.0
 pathos
 multiprocess
 fastparquet==0.4.1
+thrift==0.16.0
 flask-restplus==0.13.0
 Flask==1.1.4
 Werkzeug==0.16.1
