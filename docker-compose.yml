@@ -2,7 +2,7 @@ version: '3.6'
 services:
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.27
     container_name: nginx
     ports:
       - 9500:9500
@@ -110,13 +110,13 @@ services:
       - memcached
 
   redis:
-    image: "redis:alpine"
+    image: "redis:7.4-alpine"
     command: redis-server --port 6379 --save ""
     ports:
       - 6379:6379
 
   memcached:
-    image: memcached
+    image: memcached:1.6
     ports:
       - 11211:11211
 
@@ -139,6 +139,6 @@ services:
       - 3306:3306
 
   adminer:
-    image: adminer
+    image: adminer:4
     ports:
       - 8080:8080

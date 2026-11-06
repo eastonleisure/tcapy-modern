@@ -340,3 +340,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   the market data reloaded, because a 4.4 data directory can't be opened by 8.0+ directly.
 - **How tested:** the stack has run on `mongo:4.4` throughout: 2,100,186 EURUSD ticks loaded and read back, all web
   pages calculate from it, and the full test suite's Arctic tests pass.
+
+### docker-compose.yml: pin nginx, Redis, memcached and Adminer
+
+- **File:** `docker-compose.yml`
+- **What changed:** `nginx:latest` -> `nginx:1.27`, `redis:alpine` -> `redis:7.4-alpine`, `memcached` ->
+  `memcached:1.6`, `adminer` -> `adminer:4`.
+- **Why:** untagged or `latest` images change whenever a new release is published, so the same compose file can start
+  different software from one day to the next (exactly what broke the MySQL service). These are the series the stack
+  was verified with. Each tag still receives that series' patch releases.
+- **How tested:** the running stack uses exactly these images (nginx 1.27.5, Redis 7.4.12, memcached 1.6.45,
+  Adminer 4): the web UI on every page, Redis caching of results, Celery tasks via Redis, the Celery result backend in
+  memcached, and the Adminer page (HTTP 200) all work on them. The nginx config was validated with `nginx -t` on
+  `nginx:1.27`.
