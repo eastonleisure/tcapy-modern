@@ -365,3 +365,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** `docker compose config` on the file without the key reports no warning and resolves all ten services
   (nginx, jupyter, gunicorn_tcapy, gunicorn_tcapyboard, celery, redis, memcached, mongo, mysql, adminer). The running
   stack has used the file without this key.
+
+### docker-compose.yml: remove the trailing `&` from the gunicorn commands (tidy-up)
+
+- **File:** `docker-compose.yml`
+- **What changed:** both gunicorn `command:` strings ended in `... tcapy_wsgi:application & ` (and the same for
+  tcapyboard); the trailing `& ` is removed.
+- **Why:** no behaviour change - this is to stop the file being misleading. `&` means "run in the background" in a
+  shell. Compose doesn't run commands through a shell and drops it, so it has no effect today. But if the command were
+  ever run through a shell (eg. moved into a script or `sh -c`), gunicorn would be sent to the background, the
+  container's main process would exit, and the container would stop immediately.
+- **How tested:** `docker compose config` shows the resolved commands end at `tcapy_wsgi:application` /
+  `tcapyboard_wsgi:application` both with and without the `&` (Compose already dropped it); gunicorn only reads the
+  first positional argument (`self.app_uri = args[0]`). The running stack uses the commands without it.
