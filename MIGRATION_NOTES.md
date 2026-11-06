@@ -451,3 +451,24 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   ```
   This was done on the development stack, which has run on `caching_sha2_password` since (web UI, notebooks and test
   suite all read/write MySQL).
+
+### Give the MySQL user access to trade_database_test_harness on first start
+
+- **Files:** `docker/mysql-init/10-tcapy-test-harness.sh` (new), `docker-compose.yml`
+- **What changed:** a script that creates `trade_database_test_harness` and grants `MYSQL_USER` all privileges on it,
+  mounted into the mysql service at `/docker-entrypoint-initdb.d`. The official MySQL image runs scripts there once,
+  when it initialises an empty data directory.
+- **Why:** the MySQL image only gives `MYSQL_USER` access to `MYSQL_DATABASE` (`trade_database`). tcapy's notebooks
+  (eg. `populating_databases_for_tcapy.ipynb`) and test configuration use `trade_database_test_harness`, so loading
+  trade data there failed with
+  `1044 (42000): Access denied for user 'tcapyuser'@'%' to database 'trade_database_test_harness'`.
+- **How tested:** started fresh MySQL 8.0 containers with and without the script mounted and ran tcapy's trade write
+  and read against `trade_database_test_harness`. Without it: the access-denied error above. With it: the entrypoint
+  logs `running /docker-entrypoint-initdb.d/10-tcapy-test-harness.sh`, `SHOW GRANTS` lists
+  `GRANT ALL PRIVILEGES ON trade_database_test_harness.* TO tcapyuser`, and the write and read succeed (52 EURUSD
+  trades). On the development stack, the populating notebook's trade-data section ran with this grant in place.
+- **Existing installs:** the script only runs on an empty data directory. To apply it to an existing one, run it once
+  inside the mysql container:
+  ```
+  docker compose exec -T mysql bash -s < docker/mysql-init/10-tcapy-test-harness.sh
+  ```

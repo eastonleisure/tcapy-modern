@@ -135,6 +135,8 @@ services:
     image: mysql:8.0
     volumes:
       - /data/db_mysql:/var/lib/mysql
+      # first-time setup: also give MYSQL_USER the trade_database_test_harness database the notebooks use
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
     env_file: .tcapy.env
     ports:
       - 127.0.0.1:3306:3306
