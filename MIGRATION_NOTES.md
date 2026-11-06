@@ -875,3 +875,12 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   branch is silently skipped. Python 3.8+ warns about it ("SyntaxWarning: 'is' with a literal").
 - **How tested:** the file compiles without the warning; candlestick charts render on the Detailed page. In the current
   code the values passed are literals, so no behaviour change is visible today.
+
+### Compare strings with `!=`, not `is not` (timeline gap filling)
+
+- **File:** `tcapy/vis/displaylisteners.py`
+- **What changed:** `constants.timeline_fillna is not 'nofill'` -> `!= 'nofill'`.
+- **Why:** same identity-vs-equality problem: a `timeline_fillna` value of `'nofill'` that isn't the same string
+  object (eg. set from configuration) would still be treated as a fill method.
+- **How tested:** compiles without the warning; timeline charts render on the Aggregated page. No visible change with
+  the default setting.

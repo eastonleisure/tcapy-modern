@@ -1030,7 +1030,7 @@ class PlotRender(object):
 
         self._check_empty(timeline_df)
 
-        if constants.timeline_fillna is not 'nofill':
+        if constants.timeline_fillna != 'nofill':
             if constants.timeline_fillna == 'ffill':
                 timeline_df = timeline_df.fillna(method='ffill')
             if constants.timeline_fillna == 'zero':
