@@ -5,6 +5,8 @@ downloader mishandles failures. Fixed here, at image build time:
 - `fetch_tick` never checked the HTTP status, so 403/404/5xx pages were treated as tick data, failed to decompress
   and that hour was silently dropped. Responses containing the text 'error' were retried, but that path never
   incremented the attempt counter, so it could loop forever.
+- `download_tick`: if every multithreaded download attempt failed, `tick_list` was never assigned, raising
+  UnboundLocalError instead of returning no data.
 Note: Dukascopy's CDN currently answers findatapy's plain requests with 403 Forbidden. That is deliberately NOT worked
 around here (upstream findatapy >= 0.1.37 sends a browser User-Agent); with these fixes a blocked download is reported
 as a failed download instead of crashing or retrying forever.
@@ -103,6 +105,18 @@ new_fetch = """        # Try up to 20 times to download
         if (tick_request_content is None):"""
 
 web = replace_once(web, old_fetch, new_fetch, 'fetch_tick retry loop')
+
+# --- download_tick: tick_list must exist even when every multithreaded attempt fails
+web = replace_once(web,
+"""        if multi_threaded:
+
+            completed = False
+""",
+"""        if multi_threaded:
+
+            completed = False
+            tick_list = []  # patched: stays empty (-> no data) if every attempt below fails
+""", 'download_tick multithreaded block')
 
 open(web_py, 'w').write(web)
 

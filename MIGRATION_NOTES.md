@@ -689,3 +689,14 @@ fixes make a refused or failed download fail quickly and cleanly instead.
     gives up after 20 attempts and returns no data;
   - a real request to Dukascopy (403): original - still running after 60s; patched - returns no data in 0.1s with the
     "refused" error logged.
+
+### Return "no data" when every download attempt fails
+
+- **File:** `docker/patch_findatapy_dukascopy.py`
+- **What changed:** in `DataVendorDukasCopy.download_tick`, `tick_list` is initialised to an empty list before the
+  multithreaded download attempts.
+- **Why:** if all five attempts failed (eg. each hit the pool timeout), `tick_list` was never assigned and the function
+  crashed with `UnboundLocalError: local variable 'tick_list' referenced before assignment` instead of returning no data.
+  tcapy's data-vendor tests failed with exactly this error.
+- **How tested:** with every download attempt made to fail: original - `UnboundLocalError`; patched - returns `None`
+  (no data), which tcapy reports as a failed download.
