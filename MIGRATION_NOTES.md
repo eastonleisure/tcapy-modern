@@ -244,3 +244,16 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** without the rebuild, `import fastparquet` fails as above and reading
   `test/resources/small_test_market_df.parquet` returns nothing. After the rebuild, fastparquet imports and the file
   reads in full (4,369,664 rows); the sample market data then loads into Arctic (2,100,186 EURUSD ticks).
+
+### Pin python-dateutil to 2.9.0.post0
+
+- **File:** `requirements.txt`
+- **What changed:** added `python-dateutil==2.9.0.post0` (not listed before; pandas pulls it in unpinned).
+- **Why:** pip's legacy resolver picks python-dateutil 3.0.0 for pandas, but botocore (part of boto3, tcapy's AWS/S3
+  library) requires `python-dateutil<3.0.0`, so every build ended with
+  "botocore 1.33.13 has requirement python-dateutil<3.0.0,>=2.1, but you'll have python-dateutil 3.0.0 which is
+  incompatible". 2.9.0.post0 is the newest release both accept.
+- **How tested:** in this branch's built image, with dateutil 3.0.0 and with 2.9.0.post0: a boto3 S3 client can be
+  created, both web apps import, and the reference TCA calculation (EURUSD, 1-12 May 2017) gives identical results -
+  25 trades, mean slippage -0.000013700306, sum of arrival prices 27.2910554409. So this resolves a declared conflict;
+  no behaviour difference was observed either way.
