@@ -278,3 +278,38 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **Regenerating:** after changing `requirements.txt`, build the image and run
   `docker run --rm <image> pip freeze | grep -viE '^(pip|setuptools|wheel)=='` into `requirements.lock`
   (keep the header comment).
+
+---
+
+## Infrastructure
+
+### nginx: resolve the app containers per request
+
+- **File:** `tcapy/conf/tcapy_nginx_gunicorn_docker.conf`
+- **What changed:** added `resolver 127.0.0.11` (Docker's built-in DNS) and put the upstream names in variables
+  (`set $tcapy_upstream gunicorn_tcapy;` etc.), with `proxy_pass http://$tcapy_upstream:8090;` (and the same for
+  tcapyboard on 8092). The existing `rewrite ... break` that strips the `/tcapy` / `/tcapyboard` prefix is unchanged.
+- **Why:** with a plain host name in `proxy_pass`, nginx looks up the gunicorn containers' IP addresses once, when it
+  starts, and keeps them. Whenever a gunicorn container is recreated (eg. `docker compose up -d` after a rebuild) it
+  gets a new address, and nginx keeps sending requests to the old one, so both apps return **502 Bad Gateway** until
+  nginx itself is restarted. Using a variable makes nginx resolve the name through Docker's DNS at request time
+  (cached for 10s).
+- **How tested:** before the change, recreating the gunicorn containers left `http://localhost:9500/tcapy/` and
+  `/tcapyboard/` returning 502 until `docker compose restart nginx`. With it, after
+  `docker compose up -d --force-recreate --no-deps gunicorn_tcapy gunicorn_tcapyboard` both return 200 with no nginx
+  restart. Pages, Dash callbacks, assets and CSV downloads under both prefixes work through it (the full web UI was
+  tested this way).
+
+### nginx: allow trade CSV uploads larger than 1 MB on tcapyboard
+
+- **File:** `tcapy/conf/tcapy_nginx_gunicorn_docker.conf`
+- **What changed:** `client_max_body_size 100m;` in the `/tcapyboard/` location.
+- **Why:** tcapyboard's whole purpose is uploading a trade CSV. Dash sends the file base64-encoded inside a JSON request,
+  about 1.35x the file's size, and nginx's default request limit is 1 MB. So any trade file over roughly 750 KB was
+  rejected by nginx with **413 Request Entity Too Large** before tcapy saw it. Only `/tcapyboard/` is raised; the
+  main app's limit is unchanged.
+- **How tested:** a 3.1 MB trade CSV posted the way Dash does through an nginx container with the previous config got
+  `413 Request Entity Too Large`; with this setting the request was passed through to gunicorn. In the browser,
+  uploading 2.05 MB and 2.14 MB trade CSVs to tcapyboard (with this setting) reached tcapy, which read the files and
+  validated them. (Those files were the sample trades repeated to exceed 1 MB, so tcapy then rejected their duplicated
+  timestamps; a normal upload of the unrepeated sample computes all charts.)
