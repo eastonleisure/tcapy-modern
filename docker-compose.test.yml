@@ -56,7 +56,6 @@ services:
 
   mysql:
     image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password
     env_file: .tcapy.env
     environment:
       - MYSQL_DATABASE=trade_database_test_harness

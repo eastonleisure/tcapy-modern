@@ -581,3 +581,13 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   Untagged `mysql` is now MySQL 26.10, which aborts at startup with this file's
   `--default-authentication-plugin` option ("unknown variable"), so the test stack had no MySQL either.
 - **How tested:** the full test suite runs on these images (see the last entry in this section).
+
+### Use MySQL 8's default authentication in the test stack
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** removed `command: --default-authentication-plugin=mysql_native_password` from the test MySQL.
+- **Why:** same as for the main stack (see the MySQL section): the option and plugin are deprecated in MySQL 8.0, and
+  tcapy's `mysql-connector-python` 8.0.23 supports the default `caching_sha2_password`. Keeps the tests on the same
+  MySQL configuration as the app.
+- **How tested:** the test suite's MySQL tests (trade/order data written by the `fill_market_trade_databases` fixture
+  and read by the TCA tests) pass against it.
