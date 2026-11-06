@@ -167,3 +167,14 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   "No matching distribution found for setuptools>=69". thrift 0.16.0 still builds on Python 3.7.
 - **How tested:** the image build failed at thrift as above; with the pin it installs, and fastparquet (which uses it to
   read Parquet metadata) reads the sample market data file.
+
+### Pin yfinance to 0.1.63
+
+- **File:** `requirements.txt`
+- **What changed:** added `yfinance==0.1.63` (not listed before; `findatapy` 0.1.19 pulls it in unpinned).
+- **Why:** pip picks the newest yfinance, which requires `curl_cffi>=0.17`. No `curl_cffi` that new exists for
+  Python 3.7 (PyPI only offers up to 0.6.0b7 here), so the build stopped with
+  "No matching distribution found for curl_cffi>=0.17". yfinance 0.1.63 (2021, the findatapy 0.1.19 era) has no
+  `curl_cffi` dependency. tcapy itself doesn't use yfinance; it's an optional Yahoo data source inside findatapy.
+- **How tested:** the image build failed at `curl_cffi` as above; with the pin it installs, and findatapy and tcapy's
+  data modules import. The Yahoo download path itself was not exercised.
