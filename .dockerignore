@@ -4,6 +4,7 @@
 **
 
 !requirements.txt
+!requirements.lock
 
 !test
 !tcapy

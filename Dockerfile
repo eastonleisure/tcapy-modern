@@ -7,17 +7,28 @@ FROM python:3.7.7-slim-stretch as builder
 # File Author / Maintainer
 # MAINTAINER Thomas Schmelzer "thomas.schmelzer@gmail.com"
 
-COPY requirements.txt /tmp/tcapy/requirements.txt
+# requirements.txt lists what tcapy needs; requirements.lock pins every package (including transitive ones) to the
+# versions this image was verified with, so rebuilds don't silently pick up releases that break Python 3.7
+COPY requirements.txt requirements.lock /tmp/tcapy/
 
 # Dependencies for pystore and weasyprint in buildDeps
 # If we don't want to use weasyprint we
 # build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
-RUN buildDeps='gcc g++ libsnappy-dev unixodbc-dev build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info' && \
+# Packages pip builds from source (eg. blosc) ship CMake files that CMake 4 refuses to configure without this
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+
+# Debian stretch is end-of-life, so its packages now live on archive.debian.org (and stretch-updates is gone)
+RUN sed -i -e 's|deb.debian.org|archive.debian.org|g' -e 's|security.debian.org|archive.debian.org|g' \
+        -e '/stretch-updates/d' /etc/apt/sources.list && \
+    buildDeps='gcc g++ libsnappy-dev unixodbc-dev build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info' && \
     apt-get update && apt-get install -y $buildDeps --no-install-recommends && \
-    pip install --no-cache-dir -r /tmp/tcapy/requirements.txt && \
-    rm  /tmp/tcapy/requirements.txt
+    pip install --no-cache-dir -r /tmp/tcapy/requirements.txt -c /tmp/tcapy/requirements.lock
     # && \
     #apt-get purge -y --auto-remove $buildDeps
+
+# fastparquet 0.4.1 is built from source; pip's isolated build compiles it against a newer numpy than the
+# pinned runtime one (ndarray size mismatch), so rebuild it against the installed numpy
+RUN pip install --no-cache-dir --no-build-isolation --no-binary fastparquet --force-reinstall --no-deps fastparquet==0.4.1
 
 # Copy to /
 COPY ./tcapy /tcapy/tcapy
