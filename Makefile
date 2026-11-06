@@ -22,19 +22,16 @@ help:
 
 
 build:
-	docker-compose build tcapy
+	docker compose build
 
 jupyter:
-	docker-compose build jupyter
+	docker compose build jupyter
 
 test:
-	docker-compose -f docker-compose.test.yml run sut
-
-test_local:
-	docker-compose -f docker-compose.local.test.yml run sut
+	docker compose -f docker-compose.test.yml run sut
 
 doc:
-	docker-compose -f docker-compose.test.yml run sut sphinx-build /source artifacts/build
+	docker compose -f docker-compose.test.yml run sut sphinx-build /source artifacts/build
 
 tag:
 	git tag -a ${PROJECT_VERSION} -m "new tag"

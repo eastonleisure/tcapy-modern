@@ -715,3 +715,84 @@ fixes make a refused or failed download fail quickly and cleanly instead.
 With the patched image, `test/test_tcapy/test_data_vendor_feed.py` still fails (4 tests), because Dukascopy refuses the
 downloads, but now quickly and with a clear cause instead of crashing or retrying indefinitely - see the result in the
 PR description.
+
+---
+
+## CI (GitHub Actions)
+
+### Update the workflow's actions
+
+- **File:** `.github/workflows/main.yml`
+- **What changed:** `actions/checkout@v2` -> `@v4` and `actions/upload-artifact@v2` -> `@v4`; the artifact upload now
+  runs with `if: always()`.
+- **Why:** GitHub retired v1/v2 of the artifact actions, so every run failed in the "Set up job" step, before checking
+  out the code: "This request has been automatically failed because it uses a deprecated version of
+  `actions/upload-artifact: v2`". That's the red "CI / test" check on every PR. `checkout@v2` runs on a Node.js version
+  GitHub no longer supports. `if: always()` uploads the test reports (pytest HTML report and coverage) when tests fail,
+  which is when they're needed.
+- **How tested:** see the last entry in this section.
+
+### Create test credentials in CI
+
+- **File:** `.github/workflows/main.yml`
+- **What changed:** a step before `make test` writes `.tcapy.env` with a random password for MySQL and MongoDB.
+- **Why:** every service in `docker-compose.test.yml` reads `env_file: .tcapy.env`, which is git-ignored, so on a fresh
+  checkout Compose stops with "env file .../.tcapy.env not found". The test databases only exist for the length of the
+  run and publish no ports, so throwaway credentials are enough; no repository secrets are needed.
+- **How tested:** the step's script, extracted from the workflow file, run in a clean checkout produces a `.tcapy.env`
+  the test stack starts with (see the last entry).
+
+### Makefile: use `docker compose` (Compose v2)
+
+- **File:** `Makefile`
+- **What changed:** the five `docker-compose ...` commands are now `docker compose ...`.
+- **Why:** `docker-compose` is the standalone Compose v1 command, which is end-of-life and no longer installed on
+  GitHub's `ubuntu-latest` runners, so `make test` in CI would fail with "docker-compose: command not found" even after
+  the actions were fixed. `docker compose` (v2) is on the runners and in Docker Desktop.
+- **How tested:** `make test` runs the test stack with `docker compose` (last entry).
+
+### Makefile: `make build` builds the images
+
+- **File:** `Makefile`
+- **What changed:** `docker compose build tcapy` -> `docker compose build`.
+- **Why:** `docker-compose.yml` has no service called `tcapy` (they are `gunicorn_tcapy`, `gunicorn_tcapyboard`,
+  `celery`, `jupyter`, ...), so `make build` failed with "no such service: tcapy". Without a service name, Compose
+  builds every service that has a `build:` section.
+- **How tested:** `docker compose build tcapy` fails with "no such service: tcapy"; `docker compose build` builds all
+  images.
+
+### Makefile: remove the `test_local` target
+
+- **File:** `Makefile`
+- **What changed:** removed `test_local`, which ran `docker compose -f docker-compose.local.test.yml run sut`.
+- **Why:** `docker-compose.local.test.yml` doesn't exist in the repo (it isn't in the original either), so the target
+  always failed. `make test` runs the test stack locally as well as in CI.
+- **How tested:** `make test_local` previously failed with "no such file or directory" for the compose file.
+
+### Pass `RUN_PART` into the test container
+
+- **File:** `docker-compose.test.yml`
+- **What changed:** the `sut` service's `environment` now includes `RUN_PART`, passing the value from the shell running
+  Compose into the container.
+- **Why:** the workflow sets `RUN_PART: 1` so CI skips the multithreading tests ("which run out of memory on GitHub"),
+  and the test image's command checks `RUN_PART` - but the variable was only set on the runner, never passed into the
+  container, so the full suite (including the multithreading tests) always ran.
+- **How tested:** see below.
+
+### CI checks after these changes
+
+Simulated the CI job locally on this branch: wrote `.tcapy.env` with the workflow's own step script, then ran
+`RUN_PART=1 make test` (see the PR description for the result). The workflow itself runs on GitHub when the PR is
+opened.
+
+### Not changed: the Release workflow (`.github/workflows/pypi.yml`) - left as is, on purpose
+
+- **What it does:** on any pushed tag matching `[0-9]+.[0-9]+.[0-9]` (eg. `0.1.3`), it runs `make test` and then
+  publishes a package called `tcapy` to PyPI with `mariamrf/py-package-publish-action@v1.0.0`, using the repository
+  secrets `TWINE_USERNAME` / `TWINE_PASSWORD`.
+- **Why it was left:** it only runs on tags, so it doesn't affect pushes or pull requests.
+- **What to expect if a version tag is pushed:** this repository has no PyPI credentials (they belonged to the original
+  project), so the publish step would fail. It also still uses `actions/checkout@master` and an unmaintained publish
+  action, and its `make test` step would need the same `.tcapy.env` credentials step as the CI workflow. Before
+  creating version tags, decide whether to remove this workflow, or update it (and set up credentials) to publish
+  under a name you own.
