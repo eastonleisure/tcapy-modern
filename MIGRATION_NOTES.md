@@ -623,3 +623,18 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   reached MySQL early failed for reasons unrelated to tcapy.
 - **How tested:** a fresh test MySQL first accepted the test user over TCP after 25s; with the health checks, `sut`
   starts only once all three report healthy, and the test suite's database tests pass.
+
+### Keep the test image's packages compatible with tcapy
+
+- **File:** `Dockerfile` (`test` stage)
+- **What changed:** the test-only packages are installed with `-c requirements.lock` (like the main image), with
+  `sphinx==4.5.0` and `pytest-html==3.2.0` pinned.
+- **Why:** unpinned, pip installs Sphinx 5.3, which requires Jinja2 3 and upgrades it to 3.1.6 inside the test image.
+  tcapy's Flask 1.1/Dash 1.20 need Jinja2 < 3, so in the test image the web modules failed to import
+  (`ImportError: cannot import name 'escape' from 'jinja2'`) - tests would run against a different, broken set of
+  packages than the app. Sphinx 4.5.0 is the newest that works with Jinja2 2.11. The lock keeps pytest, Jinja2 etc.
+  at the app's versions.
+- **How tested:** with the original line, pip reported "flask 1.1.4 has requirement Jinja2<3.0 ... you'll have jinja2
+  3.1.6" and `import tcapy_wsgi` failed as above. With this change the test image keeps Jinja2 2.11.3 and both web
+  modules import. Sphinx 4.5.0 runs, but the Makefile's `doc` target still has nothing to build: the repo's `source/`
+  folder only contains a `.gitkeep` and no Sphinx `conf.py` (true in the original repo too).

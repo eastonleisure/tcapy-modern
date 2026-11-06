@@ -69,7 +69,9 @@ CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
 FROM builder as test
 
 # We install some extra libraries purely for testing
-RUN pip install --no-cache-dir httpretty pytest pytest-cov pytest-html sphinx mongomock requests-mock
+# Constrained by the lock like the main image; Sphinx >= 5 requires Jinja2 3, which Flask 1.1/Dash 1.20 can't use
+RUN pip install --no-cache-dir -c /tmp/tcapy/requirements.lock httpretty pytest pytest-cov pytest-html==3.2.0 \
+        sphinx==4.5.0 mongomock requests-mock
 
 WORKDIR /tcapy
 
