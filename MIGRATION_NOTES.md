@@ -278,3 +278,24 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **Regenerating:** after changing `requirements.txt`, build the image and run
   `docker run --rm <image> pip freeze | grep -viE '^(pip|setuptools|wheel)=='` into `requirements.lock`
   (keep the header comment).
+
+---
+
+## Infrastructure
+
+### nginx: resolve the app containers per request
+
+- **File:** `tcapy/conf/tcapy_nginx_gunicorn_docker.conf`
+- **What changed:** added `resolver 127.0.0.11` (Docker's built-in DNS) and put the upstream names in variables
+  (`set $tcapy_upstream gunicorn_tcapy;` etc.), with `proxy_pass http://$tcapy_upstream:8090;` (and the same for
+  tcapyboard on 8092). The existing `rewrite ... break` that strips the `/tcapy` / `/tcapyboard` prefix is unchanged.
+- **Why:** with a plain host name in `proxy_pass`, nginx looks up the gunicorn containers' IP addresses once, when it
+  starts, and keeps them. Whenever a gunicorn container is recreated (eg. `docker compose up -d` after a rebuild) it
+  gets a new address, and nginx keeps sending requests to the old one, so both apps return **502 Bad Gateway** until
+  nginx itself is restarted. Using a variable makes nginx resolve the name through Docker's DNS at request time
+  (cached for 10s).
+- **How tested:** before the change, recreating the gunicorn containers left `http://localhost:9500/tcapy/` and
+  `/tcapyboard/` returning 502 until `docker compose restart nginx`. With it, after
+  `docker compose up -d --force-recreate --no-deps gunicorn_tcapy gunicorn_tcapyboard` both return 200 with no nginx
+  restart. Pages, Dash callbacks, assets and CSV downloads under both prefixes work through it (the full web UI was
+  tested this way).
