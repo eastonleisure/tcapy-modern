@@ -7,7 +7,9 @@ FROM python:3.7.7-slim-stretch as builder
 # File Author / Maintainer
 # MAINTAINER Thomas Schmelzer "thomas.schmelzer@gmail.com"
 
-COPY requirements.txt /tmp/tcapy/requirements.txt
+# requirements.txt lists what tcapy needs; requirements.lock pins every package (including transitive ones) to the
+# versions this image was verified with, so rebuilds don't silently pick up releases that break Python 3.7
+COPY requirements.txt requirements.lock /tmp/tcapy/
 
 # Dependencies for pystore and weasyprint in buildDeps
 # If we don't want to use weasyprint we
@@ -20,8 +22,7 @@ RUN sed -i -e 's|deb.debian.org|archive.debian.org|g' -e 's|security.debian.org|
         -e '/stretch-updates/d' /etc/apt/sources.list && \
     buildDeps='gcc g++ libsnappy-dev unixodbc-dev build-essential libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info' && \
     apt-get update && apt-get install -y $buildDeps --no-install-recommends && \
-    pip install --no-cache-dir -r /tmp/tcapy/requirements.txt && \
-    rm  /tmp/tcapy/requirements.txt
+    pip install --no-cache-dir -r /tmp/tcapy/requirements.txt -c /tmp/tcapy/requirements.lock
     # && \
     #apt-get purge -y --auto-remove $buildDeps
 

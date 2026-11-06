@@ -257,3 +257,24 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   created, both web apps import, and the reference TCA calculation (EURUSD, 1-12 May 2017) gives identical results -
   25 trades, mean slippage -0.000013700306, sum of arrival prices 27.2910554409. So this resolves a declared conflict;
   no behaviour difference was observed either way.
+
+### Add requirements.lock and install from it
+
+- **Files:** `requirements.lock` (new), `Dockerfile`, `.dockerignore`
+- **What changed:**
+  - `requirements.lock` lists the exact version of every package in the built image (including the ones pulled in
+    indirectly), generated with `pip freeze` from this branch's image.
+  - The Dockerfile copies it in and installs with `pip install -r requirements.txt -c requirements.lock`, so
+    `requirements.txt` still says what tcapy needs and the lock fixes which exact versions are used.
+  - `.dockerignore` whitelists files individually, so `!requirements.lock` was added to let it into the build.
+  - Dropped the `rm /tmp/tcapy/requirements.txt` cleanup (both files are needed by the same RUN step; they're tiny).
+- **Why:** most of tcapy's dependencies are unpinned, and every fix in this section was a package whose newest release
+  no longer works with this Python 3.7 / pandas 1.0 stack. Without a lock, any future rebuild can break the same way
+  as soon as some package releases a new version. With it, rebuilds install exactly what was verified.
+- **How tested:** the lock was generated from a clean build of this branch (no pip conflicts reported). The image was
+  then rebuilt from scratch using the lock, and `pip freeze` of the new image was compared with the lock: identical.
+  Both web apps import, and the reference TCA calculation gives the same results as before (25 trades, mean slippage
+  -0.000013700306, sum of arrival prices 27.2910554409).
+- **Regenerating:** after changing `requirements.txt`, build the image and run
+  `docker run --rm <image> pip freeze | grep -viE '^(pip|setuptools|wheel)=='` into `requirements.lock`
+  (keep the header comment).
