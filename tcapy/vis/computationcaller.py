@@ -160,9 +160,6 @@ class ComputationCaller(ABC):
 
         return kwargs
 
-    def fill_computation_request_kwargs(self, kwargs, fields):
-       pass
-
     def create_computation_request(self, **kwargs):
         pass
 

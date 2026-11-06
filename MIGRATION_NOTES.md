@@ -923,3 +923,11 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   returned as "Failed to complete request").
 - **How tested:** the same runtime name check found `UtilFunc` missing before and resolved after. The REST API isn't
   part of the Docker setup, so it wasn't run as a server.
+
+### Remove a dead duplicate method
+
+- **File:** `tcapy/vis/computationcaller.py`
+- **What changed:** removed an empty `fill_computation_request_kwargs(self, kwargs, fields): pass` early in the class.
+- **Why:** the same class declares `fill_computation_request_kwargs` again further down (as an abstract method), and
+  the later definition replaces the earlier one, so the first was never used (pyflakes: "redefinition of unused").
+- **How tested:** no behaviour change; the web apps start and calculate as before.
