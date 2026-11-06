@@ -403,3 +403,20 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
 - **How tested:** ran `nginx:1.27` with this config and both ports published: port 80 gives a connection reset
   (curl exit 56, no HTTP response) and the container's only nginx listening socket is 9500, while 9500 serves
   `/tcapy/` (HTTP 200).
+
+### docker-compose.yml: publish every port on 127.0.0.1 only
+
+- **File:** `docker-compose.yml`
+- **What changed:** each of the nine published ports is now bound to `127.0.0.1` (eg. `- 6379:6379` ->
+  `- 127.0.0.1:6379:6379`), with a comment at the top of the file explaining how to expose one deliberately.
+- **Why:** `- 6379:6379` publishes on all network interfaces, so the services could be reachable from other machines
+  on the network (subject to the host's firewall). Several have no authentication at all: Redis (6379; results cache
+  and Celery queue - anyone reaching it can read or flush it), memcached (11211; Celery results), and the web apps
+  (9500 via nginx, 8090/8092 directly; tcapy has no login). The others are protected only by the passwords/token in
+  `.tcapy.env` (MySQL 3306, MongoDB 27017, Adminer 8080, Jupyter 8888). Binding to 127.0.0.1 keeps everything usable
+  from this computer while closing it to the network. The containers still reach each other over Docker's internal
+  network, which this doesn't affect.
+- **How tested:** the running stack has used exactly these bindings (`docker compose ps` shows `127.0.0.1:<port>`
+  for all nine): the web UI at `http://localhost:9500/tcapy/` and `/tcapyboard/`, Jupyter at `http://localhost:8888`,
+  Adminer at `http://localhost:8080`, and every container-to-container connection (gunicorn/celery to MySQL, MongoDB,
+  Redis, memcached; nginx to gunicorn) work. Access from another machine was not tested (no second machine available).

@@ -1,10 +1,13 @@
+# Ports are published on 127.0.0.1 only, so only this computer can reach them: Redis, memcached and the web apps
+# have no authentication. To expose a service to other machines deliberately, change its "127.0.0.1:" to
+# "0.0.0.0:".
 services:
 
   nginx:
     image: nginx:1.27
     container_name: nginx
     ports:
-      - 9500:9500
+      - 127.0.0.1:9500:9500
     volumes:
       - ./tcapy:/tcapy
       - ./tcapy/conf/tcapy_nginx_gunicorn_docker.conf:/etc/nginx/conf.d/default.conf
@@ -22,7 +25,7 @@ services:
       - APP_ENV=docker
     env_file: .tcapy.env
     ports:
-      - 8888:8888
+      - 127.0.0.1:8888:8888
     depends_on:
       - redis
       - celery
@@ -57,7 +60,7 @@ services:
       - memcached
       - celery
     ports:
-      - 8090:8090
+      - 127.0.0.1:8090:8090
 
   gunicorn_tcapyboard:
     build:
@@ -83,7 +86,7 @@ services:
       - memcached
       - celery
     ports:
-      - 8092:8092
+      - 127.0.0.1:8092:8092
 
   celery:
     build:
@@ -111,18 +114,18 @@ services:
     image: "redis:7.4-alpine"
     command: redis-server --port 6379 --save ""
     ports:
-      - 6379:6379
+      - 127.0.0.1:6379:6379
 
   memcached:
     image: memcached:1.6
     ports:
-      - 11211:11211
+      - 127.0.0.1:11211:11211
 
   mongo:
     image: mongo:4.4
     env_file: .tcapy.env
     ports:
-      - 27017:27017
+      - 127.0.0.1:27017:27017
     volumes:
       - /data/db_mongodb:/data/db
       - ./log:/var/log/mongodb
@@ -134,9 +137,9 @@ services:
       - /data/db_mysql:/var/lib/mysql
     env_file: .tcapy.env
     ports:
-      - 3306:3306
+      - 127.0.0.1:3306:3306
 
   adminer:
     image: adminer:4
     ports:
-      - 8080:8080
+      - 127.0.0.1:8080:8080
