@@ -884,3 +884,11 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   object (eg. set from configuration) would still be treated as a fill method.
 - **How tested:** compiles without the warning; timeline charts render on the Aggregated page. No visible change with
   the default setting.
+
+### Compare strings with `==`, not `is` (gzip of CSV dumps)
+
+- **File:** `tcapy/data/databasepopulator.py`
+- **What changed:** `csv_compression is 'gzip'` -> `== 'gzip'`.
+- **Why:** with a `'gzip'` value that isn't the same string object (eg. read from configuration), downloaded market
+  data dumps would silently be written uncompressed.
+- **How tested:** compiles without the warning.

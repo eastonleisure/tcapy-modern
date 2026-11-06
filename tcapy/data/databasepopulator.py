@@ -429,7 +429,7 @@ class DatabasePopulator(ABC):
                         key = '_' + self._get_postfix() + "_" + \
                               (str(df.index[0]) + str(df.index[-1])).replace(":", '_').replace(" ", '_')
 
-                        if csv_compression is 'gzip':
+                        if csv_compression == 'gzip':
                             df.to_csv(os.path.join(csv_folder, ticker + key + ".csv.gz"), compression='gzip')
                         else:
                             df.to_csv(os.path.join(csv_folder, ticker +  key + ".csv"))
