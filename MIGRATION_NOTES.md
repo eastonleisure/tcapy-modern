@@ -912,3 +912,14 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   `is`-comparisons are held in `TCA_QUESTIONS.md`.)
 - **How tested:** a runtime check that imports every tcapy module and verifies every name pyflakes couldn't resolve
   through `import *` found `reduce` missing before and resolved after; `TimeSeriesOps().merge([...])` works.
+
+### REST API: import `UtilFunc`
+
+- **File:** `tcapy/api/app_api.py`
+- **What changed:** added `from tcapy.util.utilfunc import UtilFunc`, and removed a duplicated
+  `from tcapy.analysis.algos.metric import *`.
+- **Why:** the API converts results with `UtilFunc().convert_dict_of_dataframe_to_json(...)` but never imported it, so
+  every successful TCA request through the REST API ended in `NameError: name 'UtilFunc' is not defined` (caught and
+  returned as "Failed to complete request").
+- **How tested:** the same runtime name check found `UtilFunc` missing before and resolved after. The REST API isn't
+  part of the Docker setup, so it wasn't run as a server.
