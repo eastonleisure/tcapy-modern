@@ -472,3 +472,23 @@ Calculation-affecting changes are not listed here until approved; see `TCA_QUEST
   ```
   docker compose exec -T mysql bash -s < docker/mysql-init/10-tcapy-test-harness.sh
   ```
+
+---
+
+## Jupyter
+
+### Add a `jupyter` stage to the Dockerfile
+
+- **File:** `Dockerfile`
+- **What changed:** a new `jupyter` build stage on top of `builder` (the tcapy image). It adds a `jovyan` user (UID
+  1000), copies `tcapy_notebooks`, `tcapy_scripts`, `tcapy_examples`, `test` and `tcapy` into its home directory, and
+  runs the classic Jupyter Notebook server on port 8888.
+- **Why:** the jupyter service was built from `binder/Dockerfile`, whose base image `tschm/jupyter:1.2.0` has been
+  removed from Docker Hub ("pull access denied ... repository does not exist"), so the service could not be built at
+  all. Building on the tcapy image reuses its pinned packages - `notebook` 6.4.12, `nbconvert` 6.0.7, `jupyterlab`
+  2.3.2 are already in `requirements.txt`/`requirements.lock` - so the notebooks run against exactly the same
+  tcapy/pandas/numpy as the web apps. The copied folders recreate the repo-root layout the notebooks expect
+  (`../test/resources/`, `../tcapy/vis/report/templates/`), as the old binder image did by copying the whole repo.
+- **Access token:** Jupyter reads `JUPYTER_TOKEN` (eg. put `JUPYTER_TOKEN=<random string>` in `.tcapy.env`). Without
+  it, Jupyter generates a token and prints the login URL in `docker compose logs jupyter`.
+- **How tested:** see the next entry (tested together with the compose service).
