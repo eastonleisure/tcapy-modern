@@ -1018,3 +1018,17 @@ has the full reasoning for each, including whether results can change. The refer
   answering "no, data is missing". Only the data-vendor tests call it; no TCA calculation does.
 - **How tested:** `test_write_csv_from_data_vendor` now fails on its assertion (no data from Dukascopy) instead of the
   `AttributeError`.
+
+### Redis cache: store tables whose index mixes timestamps and text
+
+- **File:** `tcapy/util/deltaizeserialize.py`
+- **What changed:** new helper `_df_to_parquet()`, used for both Parquet writes in `convert_python_to_binary()`. If
+  writing a table fails **and** its index is a mixed-type object index, it retries with the index converted to strings.
+  Tables that already serialise are written exactly as before.
+- **Why:** tables with a summary row - the markout table (trade timestamps plus an `'Avg'` row) and the trade-outliers
+  table - have an index pyarrow 2.0 can't write (`TypeError: an integer is required (got type str)`). Caching the
+  results failed, so every **Detailed** and **Compliance** calculation in the web UI, and the **tcapyboard** upload
+  calculation, stopped with "an integer is required (got type str)". The numbers don't change; in that fallback case
+  the cached table's index comes back as text, and it's only used for HTML tables and CSV downloads.
+- **How tested:** Detailed, Compliance and tcapyboard calculations complete in the web UI, with their tables, charts and
+  CSV downloads; reference TCA unchanged.
