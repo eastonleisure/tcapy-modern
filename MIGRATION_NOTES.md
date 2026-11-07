@@ -3,7 +3,8 @@
 Changes made to get tcapy (cuemacro master `6a06f73`, tag `v0.1.2`) building and running again with Docker on
 Ubuntu/WSL2. One entry per commit, in the order they were made.
 
-Calculation-affecting changes are not listed here until approved; see `TCA_QUESTIONS.md`.
+Changes near the TCA calculations were held for a separate decision first (see `TCA_QUESTIONS.md`); the four that
+were approved are under "TCA fixes" below.
 
 ---
 
@@ -1074,3 +1075,12 @@ has the full reasoning for each, including whether results can change. The refer
   specified" (MongoDB similarly). `docker-compose` (v1) is no longer installed with Docker.
 - **How tested:** on a fresh clone with empty database folders: the old sample and an empty file both stop MySQL with
   the errors above; the new sample starts all services.
+
+### Add `TCA_QUESTIONS.md`
+
+- **File:** `TCA_QUESTIONS.md` (new); the introduction of `MIGRATION_NOTES.md`
+- **What changed:** adds the write-up of the four changes near the TCA calculations that were held for a separate
+  decision - what each does, whether results can change, what breaks without it - with the decision (all four approved,
+  see "TCA fixes"). The notes' introduction now says so.
+- **Why:** `MIGRATION_NOTES.md` and the README refer to it, but it hadn't been committed.
+- **How tested:** documentation only; links checked.
