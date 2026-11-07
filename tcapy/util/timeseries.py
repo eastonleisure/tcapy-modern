@@ -1028,31 +1028,31 @@ class TimeSeriesOps(object):
         if isinstance(date, str):
             date1 = None
 
-            if date is 'midnight':
+            if date == 'midnight':
                 date1 = datetime.datetime.utcnow()
 
                 date1 = datetime.datetime(date1.year, date1.month, date1.day, 0, 0, 0)
-            elif date is 'decade':
+            elif date == 'decade':
                 date1 = datetime.datetime.utcnow()
 
                 date1 = date1 - timedelta(days=365 * 10)
-            elif date is '_year':
+            elif date == '_year':
                 date1 = datetime.datetime.utcnow()
 
                 date1 = date1 - timedelta(days=365)
-            elif date is 'month':
+            elif date == 'month':
                 date1 = datetime.datetime.utcnow()
 
                 date1 = date1 - timedelta(days=30)
-            elif date is 'week':
+            elif date == 'week':
                 date1 = datetime.datetime.utcnow()
 
                 date1 = date1 - timedelta(days=7)
-            elif date is 'day':
+            elif date == 'day':
                 date1 = datetime.datetime.utcnow()
 
                 date1 = date1 - timedelta(days=1)
-            elif date is 'hour':
+            elif date == 'hour':
                 date1 = datetime.datetime.utcnow()
 
                 date1 = date1 - timedelta(hours=1)
@@ -1726,7 +1726,7 @@ class RandomiseTimeSeries(object):
 
     def create_random_time_series(self, max_points=-1, freq='daily', start='01 Jan 2010', end=datetime.datetime.utcnow().date(), cols=['price']):
 
-        if freq is 'daily':
+        if freq == 'daily':
             dates = pd.date_range(start=start, end=end, freq='B')
         else:
             dates = pd.date_range(start=start, end=end, freq='1min')

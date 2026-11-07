@@ -999,3 +999,13 @@ has the full reasoning for each, including whether results can change. The refer
   raised `ValueError: Index data must be 1-dimensional`. For a Series (what the web UI's distribution charts pass), both
   give the same number, NaNs skipped.
 - **How tested:** `test_results_agg.py::test_histogram_generator` passes (it failed before); reference TCA unchanged.
+
+### timeseries.py: compare strings with `==`, not `is`
+
+- **File:** `tcapy/util/timeseries.py`
+- **What changed:** 8 comparisons: `date is 'midnight'` / `'decade'` / `'_year'` / `'month'` / `'week'` / `'day'` /
+  `'hour'` in `TimeSeriesOps.date_parse()`, and `freq is 'daily'` in `RandomiseTimeSeries.create_random_time_series()`.
+- **Why:** `is` checks whether two strings are the same object, so these branches only worked when Python happened to
+  reuse the same string (eg. literals), not for equal strings built at runtime or read from input. Python 3.8+ warns
+  about it (`SyntaxWarning`). When the old check worked, the result is identical.
+- **How tested:** the time series tests pass; the file compiles without the warning; reference TCA unchanged.
