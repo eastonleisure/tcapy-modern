@@ -31,9 +31,9 @@ class ResultsSummary(object):
     def _create_histogram_distribution(self, df, min_x=None, max_x=None, extend_x_proportion_percentage=20,
                                        postfix_label=None, obs_weights=None, denormalised=True):
 
-        # get min/max values for our histogram
-        min_hist_x = df.min()
-        max_hist_x = df.max()
+        # get min/max values for our histogram (as scalars, so this also works for a one-column DataFrame)
+        min_hist_x = float(np.nanmin(df.values))
+        max_hist_x = float(np.nanmax(df.values))
 
         extend_x_proportion_percentage = 1.0 + (float(extend_x_proportion_percentage) / 100.0)
 

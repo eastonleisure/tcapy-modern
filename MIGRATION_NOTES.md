@@ -981,3 +981,21 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   accepting the requests again they are reported as `XPASS`, so it's visible.
 - **How tested:** the full test suite (see the PR): the four tests are reported as `xfailed` and the run's exit code
   no longer depends on them.
+
+---
+
+## TCA fixes (held in `TCA_QUESTIONS.md`, then approved)
+
+These four touch code near the TCA calculations, so they were held for a separate decision first. `TCA_QUESTIONS.md`
+has the full reasoning for each, including whether results can change. The reference TCA calculation (EURUSD,
+1-12 May 2017) gives identical results with all four: 25 trades, mean slippage -0.000013700306, sum of arrival prices
+27.2910554409.
+
+### Histogram: use scalar min/max
+
+- **File:** `tcapy/analysis/algos/resultssummary.py` (`_create_histogram_distribution`)
+- **What changed:** `df.min()` / `df.max()` -> `float(np.nanmin(df.values))` / `float(np.nanmax(df.values))`.
+- **Why:** for a one-column DataFrame, `df.min()` is a one-element Series, so `np.linspace` built a 2-D array and pandas
+  raised `ValueError: Index data must be 1-dimensional`. For a Series (what the web UI's distribution charts pass), both
+  give the same number, NaNs skipped.
+- **How tested:** `test_results_agg.py::test_histogram_generator` passes (it failed before); reference TCA unchanged.
