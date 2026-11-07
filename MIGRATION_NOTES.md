@@ -1032,3 +1032,19 @@ has the full reasoning for each, including whether results can change. The refer
   the cached table's index comes back as text, and it's only used for HTML tables and CSV downloads.
 - **How tested:** Detailed, Compliance and tcapyboard calculations complete in the web UI, with their tables, charts and
   CSV downloads; reference TCA unchanged.
+
+---
+
+## Getting started and documentation
+
+### Script to load the bundled sample data
+
+- **File:** `tcapy_scripts/gen/load_sample_data.py` (new)
+- **What changed:** a script that uploads the sample data that ships in `test/resources/` - EURUSD market data and
+  trades/orders, late April to early June 2017 - into the Docker stack's MongoDB (Arctic) and MySQL. Run it with
+  `docker compose exec jupyter python tcapy_scripts/gen/load_sample_data.py`.
+- **Why:** the web UI needs market and trade data in the databases before it can calculate anything. The usual route,
+  downloading market data from Dukascopy, is blocked (HTTP 403), so on a fresh install there was no way to try tcapy
+  without writing code. The sample data was already in the repository for the tests.
+- **How tested:** on a fresh clone with empty databases: the script loads 2,100,186 market data rows, 184 trades and
+  89 orders, and the web UI's calculations run on them (see the PR).
