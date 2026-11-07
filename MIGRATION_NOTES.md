@@ -3,7 +3,8 @@
 Changes made to get tcapy (cuemacro master `6a06f73`, tag `v0.1.2`) building and running again with Docker on
 Ubuntu/WSL2. One entry per commit, in the order they were made.
 
-Calculation-affecting changes are not listed here until approved; see `TCA_QUESTIONS.md`.
+Changes near the TCA calculations were held for a separate decision first (see `TCA_QUESTIONS.md`); the four that
+were approved are under "TCA fixes" below.
 
 ---
 
@@ -1032,3 +1033,54 @@ has the full reasoning for each, including whether results can change. The refer
   the cached table's index comes back as text, and it's only used for HTML tables and CSV downloads.
 - **How tested:** Detailed, Compliance and tcapyboard calculations complete in the web UI, with their tables, charts and
   CSV downloads; reference TCA unchanged.
+
+---
+
+## Getting started and documentation
+
+### Script to load the bundled sample data
+
+- **File:** `tcapy_scripts/gen/load_sample_data.py` (new)
+- **What changed:** a script that uploads the sample data that ships in `test/resources/` - EURUSD market data and
+  trades/orders, late April to early June 2017 - into the Docker stack's MongoDB (Arctic) and MySQL. Run it with
+  `docker compose exec jupyter python tcapy_scripts/gen/load_sample_data.py`.
+- **Why:** the web UI needs market and trade data in the databases before it can calculate anything. The usual route,
+  downloading market data from Dukascopy, is blocked (HTTP 403), so on a fresh install there was no way to try tcapy
+  without writing code. The sample data was already in the repository for the tests.
+- **How tested:** on a fresh clone with empty databases: the script loads 2,100,186 market data rows, 184 trades and
+  89 orders, and the web UI's calculations run on them (see the PR).
+
+### README: say what this fork is, and how to run it
+
+- **File:** `README.md`
+- **What changed:** a section at the top: what this fork is (crediting cuemacro/tcapy and Saeed Amen), what was changed
+  and where it's documented, a Quickstart (create `.tcapy.env`, `docker compose up -d --build`, load the sample data,
+  which dates to pick in the web UI), the other services, how to run the tests, and known limitations. The original
+  README follows unchanged.
+- **Why:** the README was the original project's, so nothing told a visitor this is a fork, what changed, or how to get
+  it running; following the original install instructions led to a MySQL that wouldn't start (next entry).
+- **How tested:** followed the Quickstart step by step on a fresh clone with empty database folders (see the PR).
+
+### INSTALL.md: a `.tcapy.env` that works, and `docker compose`
+
+- **File:** `INSTALL.md` (Docker section)
+- **What changed:** the sample `.tcapy.env` uses `MYSQL_USER=tcapyuser` instead of `root`; the paragraph saying an empty
+  `.tcapy.env` works is replaced by what the database containers actually need (and the errors you get otherwise), and
+  the advice to change users away from `root` is removed (the sample no longer uses it). Commands use `docker compose`
+  (Compose v2), and `docker-compose build --force-recreate`, which isn't a valid option, is `docker compose build
+  --no-cache`.
+- **Why:** both documented options stopped MySQL from starting on a fresh install. With the sample's `MYSQL_USER=root`
+  the MySQL 8 image refuses to start ("MYSQL_USER and MYSQL_PASSWORD are for configuring a regular user and cannot be
+  used for the root user"); with an empty file it stops with "Database is uninitialized and password option is not
+  specified" (MongoDB similarly). `docker-compose` (v1) is no longer installed with Docker.
+- **How tested:** on a fresh clone with empty database folders: the old sample and an empty file both stop MySQL with
+  the errors above; the new sample starts all services.
+
+### Add `TCA_QUESTIONS.md`
+
+- **File:** `TCA_QUESTIONS.md` (new); the introduction of `MIGRATION_NOTES.md`
+- **What changed:** adds the write-up of the four changes near the TCA calculations that were held for a separate
+  decision - what each does, whether results can change, what breaks without it - with the decision (all four approved,
+  see "TCA fixes"). The notes' introduction now says so.
+- **Why:** `MIGRATION_NOTES.md` and the README refer to it, but it hadn't been committed.
+- **How tested:** documentation only; links checked.

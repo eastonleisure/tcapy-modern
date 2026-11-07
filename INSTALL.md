@@ -143,13 +143,15 @@ run to create these.
 In `/home/tcapyuser/cuemacro/tcapy` create a `.tcapy.env` file that has environment variables to be used by the various
 Docker containers. In particular this will be useful for holding the usernames and passwords. 
 
-If it's an empty file, the defaults from `constants.py` will be used instead, which won't be as secure. To create an empty
-`.tcapy.env` file, simply run `touch .tcapy.env` in the folder `/home/tcapuser/cuemacro/tcapy`. Note, you need to make
-sure you have a `.tcapy.env` file even if it is empty!
- 
-Here is a sample `.tcapy.env` file below:
+The MySQL and MongoDB containers need their credentials from this file the first time they start: with an empty file
+(or without the passwords) MySQL stops with "Database is uninitialized and password option is not specified" and
+MongoDB with "missing 'MONGO_INITDB_ROOT_USERNAME' or 'MONGO_INITDB_ROOT_PASSWORD'". `MYSQL_USER` must not be
+`root`: it creates an additional, regular user (MySQL refuses to start with `MYSQL_USER=root`), and tcapy connects
+as that user.
 
-    MYSQL_USER=root
+Here is a sample `.tcapy.env` file below (use your own passwords; the README's Quickstart generates a random one):
+
+    MYSQL_USER=tcapyuser
     MYSQL_PASSWORD=blah_blah_
     MYSQL_ROOT_PASSWORD=blah_blah_
     MYSQL_DATABASE=trade_database
@@ -165,8 +167,6 @@ instead of MongoDB spawned by Docker (you should also edit docker-compose.yml so
 
     MONGO_CONNECTION_STRING=mongodb+srv://<username>:<password>@cluster0.blah-blah.mongodb.net/?retryWrites=true&w=majority
     
-In practice, you may wish to use different users other than `root` for your databases, when you configure them to 
-minimize access.
 
 `docker-compose.yml` defines all the various containers which will need to be installed. For some of these images 
 they'll also need to run the `Dockerfile`, this will for example setup the Python environment, and copy the various 
@@ -186,9 +186,9 @@ the appropriate Python environment for those containers running tcapy's Python c
 
 In the folder `/home/tcapyuser/cuemacro/tcapy/` run the following commands:
 
-* `docker-compose build` - this will build all the various tcapy services, it might take a while, because it will 
+* `docker compose build` - this will build all the various tcapy services, it might take a while, because it will 
 involve a lot of downloading of all the dependencies and collecting them.
-* `docker-compose up` - this can be used to run all the containers
+* `docker compose up` - this can be used to run all the containers
 
 We can then get access to many of the services from our host machine:
 
@@ -233,14 +233,14 @@ to help you manage your Docker images and containers, which we list below:
     * delete all containers
     * warning, it will take a long time to build after this!
 
-Here are some commands focused on `docker-compose` options
+Here are some commands focused on `docker compose` options
 
-* `docker-compose rm -v mongo` 
+* `docker compose rm -v mongo` 
     * remove of anonymous volume of a service
     * this can be necessary with databases if you're trying to change the password, switch to a host OS volume etc.
-* `docker-compose build --force-recreate` 
+* `docker compose build --no-cache` 
     * builds but forces the recreation of images, rather than using cached versions
-* `docker-compose down` 
+* `docker compose down` 
     * spin down the services
 
 You might also try to login manually into your various containers from your host OS, for `mysql` or `mongo`:
