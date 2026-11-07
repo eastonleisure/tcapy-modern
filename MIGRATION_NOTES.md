@@ -1009,3 +1009,12 @@ has the full reasoning for each, including whether results can change. The refer
   reuse the same string (eg. literals), not for equal strings built at runtime or read from input. Python 3.8+ warns
   about it (`SyntaxWarning`). When the old check worked, the result is identical.
 - **How tested:** the time series tests pass; the file compiles without the warning; reference TCA unchanged.
+
+### `check_data_frame_points_in_every_hour`: return False when there's no data
+
+- **File:** `tcapy/util/utilfunc.py`
+- **What changed:** returns `False` straight away if the DataFrame is `None` or empty.
+- **Why:** with no data it crashed with `AttributeError: 'NoneType' object has no attribute 'index'` instead of
+  answering "no, data is missing". Only the data-vendor tests call it; no TCA calculation does.
+- **How tested:** `test_write_csv_from_data_vendor` now fails on its assertion (no data from Dukascopy) instead of the
+  `AttributeError`.

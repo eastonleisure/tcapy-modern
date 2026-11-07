@@ -760,6 +760,9 @@ class UtilFunc(object):
         -------
         bool
         """
+        if df is None or df.empty:
+            return False
+
         start_date_t = pd.Timestamp(start_date).replace(tzinfo=df.index.tz)
         finish_date_t = pd.Timestamp(finish_date).replace(tzinfo=df.index.tz)
 
