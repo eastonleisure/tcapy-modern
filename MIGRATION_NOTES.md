@@ -1059,3 +1059,18 @@ has the full reasoning for each, including whether results can change. The refer
 - **Why:** the README was the original project's, so nothing told a visitor this is a fork, what changed, or how to get
   it running; following the original install instructions led to a MySQL that wouldn't start (next entry).
 - **How tested:** followed the Quickstart step by step on a fresh clone with empty database folders (see the PR).
+
+### INSTALL.md: a `.tcapy.env` that works, and `docker compose`
+
+- **File:** `INSTALL.md` (Docker section)
+- **What changed:** the sample `.tcapy.env` uses `MYSQL_USER=tcapyuser` instead of `root`; the paragraph saying an empty
+  `.tcapy.env` works is replaced by what the database containers actually need (and the errors you get otherwise), and
+  the advice to change users away from `root` is removed (the sample no longer uses it). Commands use `docker compose`
+  (Compose v2), and `docker-compose build --force-recreate`, which isn't a valid option, is `docker compose build
+  --no-cache`.
+- **Why:** both documented options stopped MySQL from starting on a fresh install. With the sample's `MYSQL_USER=root`
+  the MySQL 8 image refuses to start ("MYSQL_USER and MYSQL_PASSWORD are for configuring a regular user and cannot be
+  used for the root user"); with an empty file it stops with "Database is uninitialized and password option is not
+  specified" (MongoDB similarly). `docker-compose` (v1) is no longer installed with Docker.
+- **How tested:** on a fresh clone with empty database folders: the old sample and an empty file both stop MySQL with
+  the errors above; the new sample starts all services.
