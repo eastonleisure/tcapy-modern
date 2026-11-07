@@ -981,3 +981,54 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   accepting the requests again they are reported as `XPASS`, so it's visible.
 - **How tested:** the full test suite (see the PR): the four tests are reported as `xfailed` and the run's exit code
   no longer depends on them.
+
+---
+
+## TCA fixes (held in `TCA_QUESTIONS.md`, then approved)
+
+These four touch code near the TCA calculations, so they were held for a separate decision first. `TCA_QUESTIONS.md`
+has the full reasoning for each, including whether results can change. The reference TCA calculation (EURUSD,
+1-12 May 2017) gives identical results with all four: 25 trades, mean slippage -0.000013700306, sum of arrival prices
+27.2910554409.
+
+### Histogram: use scalar min/max
+
+- **File:** `tcapy/analysis/algos/resultssummary.py` (`_create_histogram_distribution`)
+- **What changed:** `df.min()` / `df.max()` -> `float(np.nanmin(df.values))` / `float(np.nanmax(df.values))`.
+- **Why:** for a one-column DataFrame, `df.min()` is a one-element Series, so `np.linspace` built a 2-D array and pandas
+  raised `ValueError: Index data must be 1-dimensional`. For a Series (what the web UI's distribution charts pass), both
+  give the same number, NaNs skipped.
+- **How tested:** `test_results_agg.py::test_histogram_generator` passes (it failed before); reference TCA unchanged.
+
+### timeseries.py: compare strings with `==`, not `is`
+
+- **File:** `tcapy/util/timeseries.py`
+- **What changed:** 8 comparisons: `date is 'midnight'` / `'decade'` / `'_year'` / `'month'` / `'week'` / `'day'` /
+  `'hour'` in `TimeSeriesOps.date_parse()`, and `freq is 'daily'` in `RandomiseTimeSeries.create_random_time_series()`.
+- **Why:** `is` checks whether two strings are the same object, so these branches only worked when Python happened to
+  reuse the same string (eg. literals), not for equal strings built at runtime or read from input. Python 3.8+ warns
+  about it (`SyntaxWarning`). When the old check worked, the result is identical.
+- **How tested:** the time series tests pass; the file compiles without the warning; reference TCA unchanged.
+
+### `check_data_frame_points_in_every_hour`: return False when there's no data
+
+- **File:** `tcapy/util/utilfunc.py`
+- **What changed:** returns `False` straight away if the DataFrame is `None` or empty.
+- **Why:** with no data it crashed with `AttributeError: 'NoneType' object has no attribute 'index'` instead of
+  answering "no, data is missing". Only the data-vendor tests call it; no TCA calculation does.
+- **How tested:** `test_write_csv_from_data_vendor` now fails on its assertion (no data from Dukascopy) instead of the
+  `AttributeError`.
+
+### Redis cache: store tables whose index mixes timestamps and text
+
+- **File:** `tcapy/util/deltaizeserialize.py`
+- **What changed:** new helper `_df_to_parquet()`, used for both Parquet writes in `convert_python_to_binary()`. If
+  writing a table fails **and** its index is a mixed-type object index, it retries with the index converted to strings.
+  Tables that already serialise are written exactly as before.
+- **Why:** tables with a summary row - the markout table (trade timestamps plus an `'Avg'` row) and the trade-outliers
+  table - have an index pyarrow 2.0 can't write (`TypeError: an integer is required (got type str)`). Caching the
+  results failed, so every **Detailed** and **Compliance** calculation in the web UI, and the **tcapyboard** upload
+  calculation, stopped with "an integer is required (got type str)". The numbers don't change; in that fallback case
+  the cached table's index comes back as text, and it's only used for HTML tables and CSV downloads.
+- **How tested:** Detailed, Compliance and tcapyboard calculations complete in the web UI, with their tables, charts and
+  CSV downloads; reference TCA unchanged.

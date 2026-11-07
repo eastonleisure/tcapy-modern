@@ -26,6 +26,21 @@ import io
 
 constants = Constants()
 
+
+def _df_to_parquet(df, ser, **kwargs):
+    """Write df to parquet; pyarrow can't serialise a mixed-type object index (eg. trade timestamps plus an
+    'Avg' summary row in display tables), so on failure retry with that index converted to strings."""
+    try:
+        df.to_parquet(ser, **kwargs)
+    except Exception:
+        if df.index.dtype != object:
+            raise
+        ser.seek(0); ser.truncate()
+        df = df.copy()
+        df.index = df.index.map(str)
+        df.to_parquet(ser, **kwargs)
+
+
 class DeltaizeSerialize(object):
     """This class can be used to serialize and deserialize pandas DataFrames and Plotly Figure objects with/without
     compression. It can also split up large DataFrames into chunks, which is often necessary if we are using Redis
@@ -74,7 +89,7 @@ class DeltaizeSerialize(object):
                     for i in range(0, len(obj_list)):
                         if obj_list[i] is not None:
                             ser = io.BytesIO()
-                            obj_list[i].to_parquet(ser,
+                            _df_to_parquet(obj_list[i], ser,
                                                  compression=constants.volatile_cache_redis_compression[
                                                           constants.volatile_cache_redis_format])
                             ser.seek(0)
@@ -92,7 +107,7 @@ class DeltaizeSerialize(object):
                     for i in range(0, len(obj_list)):
                         if obj_list[i] is not None:
                             ser = io.BytesIO()
-                            obj_list[i].to_parquet(ser,
+                            _df_to_parquet(obj_list[i], ser,
                                                    compression=
                                                    constants.volatile_cache_redis_compression[
                                                        constants.volatile_cache_redis_format])
