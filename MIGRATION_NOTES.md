@@ -1048,3 +1048,14 @@ has the full reasoning for each, including whether results can change. The refer
   without writing code. The sample data was already in the repository for the tests.
 - **How tested:** on a fresh clone with empty databases: the script loads 2,100,186 market data rows, 184 trades and
   89 orders, and the web UI's calculations run on them (see the PR).
+
+### README: say what this fork is, and how to run it
+
+- **File:** `README.md`
+- **What changed:** a section at the top: what this fork is (crediting cuemacro/tcapy and Saeed Amen), what was changed
+  and where it's documented, a Quickstart (create `.tcapy.env`, `docker compose up -d --build`, load the sample data,
+  which dates to pick in the web UI), the other services, how to run the tests, and known limitations. The original
+  README follows unchanged.
+- **Why:** the README was the original project's, so nothing told a visitor this is a fork, what changed, or how to get
+  it running; following the original install instructions led to a MySQL that wouldn't start (next entry).
+- **How tested:** followed the Quickstart step by step on a fresh clone with empty database folders (see the PR).

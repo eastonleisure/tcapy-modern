@@ -1,3 +1,83 @@
+> **About this fork**
+>
+> This is a fork of [cuemacro/tcapy](https://github.com/cuemacro/tcapy), the open source TCA library created by
+> Saeed Amen at [Cuemacro](https://www.cuemacro.com). The original no longer builds: its Docker base image, many of its
+> Python packages and its database images have changed or disappeared since its last release (0.1.2, January 2021).
+>
+> This fork gets it building and running again with Docker, on Linux or Windows (WSL2). It still runs Python 3.7 with
+> the library versions tcapy was written for, now pinned so that they install together; moving to current Python,
+> pandas and Dash would be the next step. Every change - what, why and how it was tested - is in
+> [MIGRATION_NOTES.md](MIGRATION_NOTES.md). The TCA calculations themselves are unchanged apart from four small bug
+> fixes, explained in [TCA_QUESTIONS.md](TCA_QUESTIONS.md); the reference calculation gives identical results.
+>
+> Everything below the Quickstart is the original project's documentation.
+
+## Quickstart (Docker)
+
+You need [Docker](https://docs.docker.com/get-docker/) with Compose v2 (Docker Desktop on Windows/macOS, or Docker
+Engine on Linux), and about 4 GB of memory for Docker. On Windows, run these commands in a WSL2 Ubuntu terminal.
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/eastonleisure/tcapy-modern.git
+   cd tcapy-modern
+   ```
+
+2. Create `.tcapy.env` with database credentials (it's git-ignored; this makes a random password):
+
+   ```bash
+   pw=$(openssl rand -hex 16)
+   cat > .tcapy.env <<EOF
+   MYSQL_USER=tcapyuser
+   MYSQL_PASSWORD=$pw
+   MYSQL_ROOT_PASSWORD=$pw
+   MYSQL_DATABASE=trade_database
+   MONGO_INITDB_ROOT_USERNAME=admin_root
+   MONGO_INITDB_ROOT_PASSWORD=$pw
+   EOF
+   ```
+
+   The databases keep their files in `/data/db_mysql` and `/data/db_mongodb` on the host, and only read these
+   credentials the first time they start with empty folders.
+
+3. Build and start everything (the first build downloads and compiles a lot, and can take half an hour or more):
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. Load the sample data (EURUSD trades, orders and market data, April-June 2017):
+
+   ```bash
+   docker compose exec jupyter python tcapy_scripts/gen/load_sample_data.py
+   ```
+
+5. Open the web UI at <http://localhost:9500/tcapy/>, choose a Start Date and Finish Date between **2017-04-26 and
+   2017-06-02** (the date lists start at today, when there's no data), make sure Ticker is **EURUSD** (on the
+   Aggregated and Compliance pages it starts as "All", which fails because the sample only has EURUSD market data)
+   and press **Calculate**. The Detailed, Aggregated and Compliance pages are linked at the top.
+
+Also running:
+
+- <http://localhost:9500/tcapyboard/> - drag and drop a trade CSV to analyse it against the market data in the
+  database; `test/resources/mini_test_trade_df.csv` (EURUSD trades only) works with the sample data
+- <http://localhost:8888> - Jupyter, with the example notebooks in `tcapy_notebooks`. The login token is printed by
+  `docker compose logs jupyter`, or set your own with `JUPYTER_TOKEN=...` in `.tcapy.env`.
+
+All ports are bound to `127.0.0.1`, so only this computer can reach them (Redis, memcached and the web apps have no
+authentication). Stop everything with `docker compose down`.
+
+**Run the tests** with `make test` (about 10 minutes; uses its own throwaway databases).
+
+**Known limitations**
+
+- Dukascopy currently refuses findatapy's download requests (HTTP 403), so downloading new market data from Dukascopy
+  doesn't work, and the four download tests are reported as expected failures.
+- Excel/xlwings and PDF reports are not set up in the Docker images (as in the original).
+
+---
+
 <img src="cuemacro_logo.png?raw=true"/>
 
 # [tcapy - Python library for transaction cost analysis (TCA)](https://github.com/cuemacro/tcapy)
