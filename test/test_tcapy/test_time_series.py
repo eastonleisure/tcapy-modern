@@ -187,16 +187,22 @@ def test_cache_handle():
 
     assert_frame_equal(df, df_1)
 
-def test_data_frame_holder():
+def test_data_frame_holder(monkeypatch):
     """Tests the storing of DataFrameHolder object which is like an enhanced dict specifically for storing DataFrames,
     alongside using the VolatileCache
     """
     from tcapy.analysis.dataframeholder import DataFrameHolder
     from tcapy.data.volatilecache import VolatileRedis as VolatileCache
+    import tcapy.util.deltaizeserialize as deltaizeserialize
     volatile_cache = VolatileCache()
 
-    # Create a very large DataFrame, which needs to be chunked in storage
-    dt = pd.date_range(start='01 Jan 2000', end='05 Jan 2020', freq='10s')
+    # DataFrames bigger than the Redis chunk size are split into chunks in storage. Rather than build a DataFrame bigger
+    # than the real 500 MB chunk size (20 years of 10s data, which needs over 8 GB of memory and gets the test killed on
+    # GitHub's runners), use a 10 MB chunk size for this test and one year of data, so each half is still chunked
+    chunk_size_mb = 10
+    monkeypatch.setattr(deltaizeserialize.constants, 'volatile_cache_redis_max_cache_chunk_size_mb', chunk_size_mb)
+
+    dt = pd.date_range(start='01 Jan 2019', end='05 Jan 2020', freq='10s')
     df = pd.DataFrame(index=dt, columns=['bid', 'mid', 'ask'])
 
     df['bid'] = np.ones(len(dt))
@@ -206,6 +212,9 @@ def test_data_frame_holder():
     df_list = TimeSeriesOps().split_array_chunks(df, chunks=2)
     df_lower = df_list[0]
     df_higher = df_list[1]
+
+    # Check each half really is split into several chunks when stored
+    assert len(deltaizeserialize.DeltaizeSerialize()._chunk_dataframes(df_lower, chunk_size_mb=chunk_size_mb)) > 1
 
     for i in ['_comp', '']:
         df_holder = DataFrameHolder()

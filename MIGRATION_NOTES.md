@@ -951,3 +951,22 @@ Calculation-affecting fixes are not in this section; they are held for a separat
   other test that needs that data does), so it only passed if an earlier test happened to leave the data behind. In a
   clean test stack it failed with `KeyError: 'sparse_market_trade_df'` (no trades found).
 - **How tested:** the full test suite (see the PR) - this test passes.
+
+---
+
+## CI: test memory
+
+### Shrink the DataFrameHolder test so it fits in CI's memory
+
+- **File:** `test/test_tcapy/test_time_series.py` (`test_data_frame_holder`)
+- **What changed:** for this test only, the Redis chunk size is set to 10 MB (with pytest's `monkeypatch`, so it is
+  restored afterwards) instead of the real 500 MB, and the DataFrame is one year of 10-second data instead of 20 years.
+  A new assertion checks that each half of the DataFrame is still split into several chunks.
+- **Why:** the test checks that a DataFrame too big for one Redis key is split into chunks and put back together
+  exactly. To get past the 500 MB limit it built 20 years of 10-second data (63 million rows), and the test process
+  peaked at over 8 GB. GitHub's runners for private repositories have about 7 GB, so the CI job was killed
+  (`make: *** [Makefile:31: test] Error 137`, "Killed" right after `test_tca_functionality_gen.py`) and uploaded no
+  reports. The same chunking code runs either way; only the size it triggers at is lowered.
+- **Not changed:** the Celery worker's `--concurrency=14` in `docker-compose.test.yml`. I first suspected it, but
+  measuring the whole test stack showed the worker peaks at about 1.5 GB; the test process was the 9.5 GB.
+- **How tested:** see the PR description (memory measured with `docker stats` while the tests ran).
