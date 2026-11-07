@@ -26,6 +26,13 @@ from tcapy.data.databasesource import DatabaseSourceNCFX, DatabaseSourceDukascop
 
 from test.config import *
 
+import pytest
+
+# Every test here downloads live market data from Dukascopy, which currently refuses findatapy's download requests
+# (HTTP 403), so they can't pass. They still run, and are reported as expected failures (xfail) instead of
+# failing the suite; if the downloads start working again they're reported as XPASS.
+pytestmark = pytest.mark.xfail(reason="Dukascopy refuses findatapy's download requests (HTTP 403)", strict=False)
+
 logger = LoggerManager().getLogger(__name__)
 
 constants = Constants()
